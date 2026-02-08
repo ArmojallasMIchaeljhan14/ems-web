@@ -15,21 +15,21 @@
                     <x-nav-link :href="route(Auth::user()->dashboardRoute())" :active="request()->routeIs('admin.dashboard') || request()->routeIs('user.dashboard') || request()->routeIs('media.dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    @if(Auth::user()->isAdmin())
+                    @role('admin')
                         <x-nav-link :href="route('admin.approvals')" :active="request()->routeIs('admin.approvals')">
                             {{ __('Approvals') }}
                         </x-nav-link>
-                    @endif
-                    @if(Auth::user()->isUser())
+                    @endrole
+                    @role('user')
                         <x-nav-link :href="route('user.requests')" :active="request()->routeIs('user.requests')">
                             {{ __('My requests') }}
                         </x-nav-link>
-                    @endif
-                    @if(Auth::user()->isMultimediaStaff())
+                    @endrole
+                    @role('multimedia_staff')
                         <x-nav-link :href="route('media.posts')" :active="request()->routeIs('media.posts')">
                             {{ __('Posts') }}
                         </x-nav-link>
-                    @endif
+                    @endrole
                 </div>
             </div>
 
@@ -39,7 +39,7 @@
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                             <div>{{ Auth::user()->name }}</div>
-                            <span class="ms-2 text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600">{{ ucfirst(str_replace('_', ' ', Auth::user()->role)) }}</span>
+                            <span class="ms-2 text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600">{{ ucfirst(str_replace('_', ' ', Auth::user()->getRoleNames()->first() ?? 'user')) }}</span>
 
                             <div class="ms-1">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -86,21 +86,21 @@
             <x-responsive-nav-link :href="route(Auth::user()->dashboardRoute())" :active="request()->routeIs('admin.dashboard') || request()->routeIs('user.dashboard') || request()->routeIs('media.dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            @if(Auth::user()->isAdmin())
+            @role('admin')
                 <x-responsive-nav-link :href="route('admin.approvals')" :active="request()->routeIs('admin.approvals')">
                     {{ __('Approvals') }}
                 </x-responsive-nav-link>
-            @endif
-            @if(Auth::user()->isUser())
+            @endrole
+            @role('user')
                 <x-responsive-nav-link :href="route('user.requests')" :active="request()->routeIs('user.requests')">
                     {{ __('My requests') }}
                 </x-responsive-nav-link>
-            @endif
-            @if(Auth::user()->isMultimediaStaff())
+            @endrole
+            @role('multimedia_staff')
                 <x-responsive-nav-link :href="route('media.posts')" :active="request()->routeIs('media.posts')">
                     {{ __('Posts') }}
                 </x-responsive-nav-link>
-            @endif
+            @endrole
         </div>
 
         <!-- Responsive Settings Options -->
@@ -108,7 +108,7 @@
             <div class="px-4">
                 <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
                 <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">{{ ucfirst(str_replace('_', ' ', Auth::user()->role)) }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">{{ ucfirst(str_replace('_', ' ', Auth::user()->getRoleNames()->first() ?? 'user')) }}</div>
             </div>
 
             <div class="mt-3 space-y-1">

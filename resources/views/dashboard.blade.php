@@ -2,7 +2,7 @@
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Dashboard') }}
-            <span class="ml-2 text-sm font-normal text-gray-500">({{ ucfirst(str_replace('_', ' ', Auth::user()->role)) }})</span>
+            <span class="ml-2 text-sm font-normal text-gray-500">({{ ucfirst(str_replace('_', ' ', Auth::user()->getRoleNames()->first() ?? 'user')) }})</span>
         </h2>
     </x-slot>
 
@@ -11,7 +11,7 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     <p>{{ __("You're logged in!") }}</p>
-                    <p class="mt-2 text-sm text-gray-600">Role: <strong>{{ Auth::user()->role }}</strong></p>
+                    <p class="mt-2 text-sm text-gray-600">Role: <strong>{{ Auth::user()->getRoleNames()->first() ?? 'user' }}</strong></p>
                 </div>
             </div>
         </div>

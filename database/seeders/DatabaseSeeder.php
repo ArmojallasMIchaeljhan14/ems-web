@@ -23,17 +23,19 @@ class DatabaseSeeder extends Seeder
 
         User::updateOrCreate(
             ['email' => 'admin@example.com'],
-            array_merge($defaults, ['name' => 'Admin User', 'role' => User::ROLE_ADMIN])
+            array_merge($defaults, ['name' => 'Admin User'])
         );
 
         User::updateOrCreate(
             ['email' => 'user@example.com'],
-            array_merge($defaults, ['name' => 'Test User', 'role' => User::ROLE_USER])
+            array_merge($defaults, ['name' => 'Test User'])
         );
 
         User::updateOrCreate(
             ['email' => 'media@example.com'],
-            array_merge($defaults, ['name' => 'Multimedia Staff', 'role' => User::ROLE_MULTIMEDIA_STAFF])
+            array_merge($defaults, ['name' => 'Multimedia Staff'])
         );
+
+        $this->call(RoleAndPermissionSeeder::class);
     }
 }

@@ -6,28 +6,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
-    public const ROLE_ADMIN = 'admin';
-
-    public const ROLE_USER = 'user';
-
-    public const ROLE_MULTIMEDIA_STAFF = 'multimedia_staff';
-
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
     ];
 
     /**
@@ -55,17 +49,17 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->hasRole('admin');
     }
 
     public function isUser(): bool
     {
-        return $this->role === self::ROLE_USER;
+        return $this->hasRole('user');
     }
 
     public function isMultimediaStaff(): bool
     {
-        return $this->role === self::ROLE_MULTIMEDIA_STAFF;
+        return $this->hasRole('multimedia_staff');
     }
 
     /**
@@ -73,10 +67,13 @@ class User extends Authenticatable
      */
     public function dashboardRoute(): string
     {
-        return match ($this->role) {
-            self::ROLE_ADMIN => 'admin.dashboard',
-            self::ROLE_MULTIMEDIA_STAFF => 'media.dashboard',
-            default => 'user.dashboard',
-        };
+        if ($this->hasRole('admin')) {
+            return 'admin.dashboard';
+        }
+        if ($this->hasRole('multimedia_staff')) {
+            return 'media.dashboard';
+        }
+
+        return 'user.dashboard';
     }
 }
