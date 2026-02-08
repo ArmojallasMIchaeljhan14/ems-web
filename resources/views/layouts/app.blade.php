@@ -36,7 +36,7 @@
                     {{ session('status') }}
                 </div>
                 @endif
-                {{ $slot }}
+                @yield('content')
 
                 @if(session('success'))
                 <div class="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border border-gray-200 bg-white p-4 shadow-lg" role="alert">
@@ -54,7 +54,7 @@
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">{{ $header }}</div>
                 </header>
             @endisset
-            <main>{{ $slot }}</main>
+            <main>@yield('content')</main>
         </div>
         @endauth
     </body>

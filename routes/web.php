@@ -29,7 +29,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
-    Route::get('/events', [EventController::class, 'index'])->name('events.index');
+    Route::resource('events', EventController::class);
+    Route::post('/events/{event}/approve', [EventController::class, 'approve'])->name('events.approve');
+    Route::post('/events/{event}/reject', [EventController::class, 'reject'])->name('events.reject');
+    Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
     Route::get('/multimedia', [MultimediaController::class, 'index'])->name('multimedia.index');
     Route::get('/program-flow', [ProgramFlowController::class, 'index'])->name('program-flow.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
