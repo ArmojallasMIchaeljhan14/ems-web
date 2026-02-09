@@ -25,15 +25,20 @@ class AuthenticatedSessionController extends Controller
         return view('auth.login');
     }
 
-    /**
-     * Handle an incoming authentication request (password only; then 2FA OTP).
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 
         $user = Auth::user();
         $userId = $user->id;
+
+        // Skip 2FA if enabled for this user
+        if ($user->skip_2fa) {
+            $request->session()->regenerate();
+            $request->session()->flash('success', __('Login Successful! Welcome to the School Event Management System.'));
+
+            return redirect()->intended(route($user->dashboardRoute(), absolute: false));
+        }
 
         $request->session()->put('otp_user_id', encrypt($userId));
         $request->session()->put('otp_remember', $request->boolean('remember'));
