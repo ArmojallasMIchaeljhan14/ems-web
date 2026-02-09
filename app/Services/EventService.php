@@ -4,12 +4,55 @@ namespace App\Services;
 
 use App\Models\Event;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class EventService
 {
+    /**
+     * -----------------------------------------------------------
+     * NEW: DASHBOARD DATA METHODS
+     * -----------------------------------------------------------
+     */
+
+    /**
+     * Get all events waiting for approval for the dashboard.
+     */
+    public function getPendingEvents()
+    {
+        return Event::where('status', 'pending_approval')
+            ->with('requestedBy') // Eager load to avoid N+1 issues in the blade loop
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get approved/published events occurring today or in the future.
+     */
+    public function getUpcomingEvents()
+    {
+        return Event::whereIn('status', ['approved', 'published'])
+            ->where('start_at', '>=', Carbon::now())
+            ->orderBy('start_at', 'asc')
+            ->get();
+    }
+
+    /**
+     * Get count of all events for the stats card.
+     */
+    public function getTotalEventsCount(): int
+    {
+        return Event::count();
+    }
+
+    /**
+     * -----------------------------------------------------------
+     * EXISTING: EVENT ACTION METHODS
+     * -----------------------------------------------------------
+     */
+
     /**
      * Update Event + Logistics + Committee + Budget in one transaction.
      *
@@ -243,5 +286,30 @@ class EventService
 
             return $event;
         });
+    }
+
+    public function getAllEventsForCalendar()
+    {
+        return Event::select('id', 'title', 'start_at as start', 'end_at as end', 'status')
+            ->get()
+            ->map(function ($event) {
+                // Map status to specific colors for the calendar view
+                $colors = [
+                    'pending_approval' => '#f39c12', // Orange
+                    'approved'         => '#00c0ef', // Aqua
+                    'published'        => '#00a65a', // Green
+                    'rejected'         => '#dd4b39', // Red
+                ];
+
+                return [
+                    'id'    => $event->id,
+                    'title' => $event->title,
+                    'start' => $event->start,
+                    'end'   => $event->end,
+                    'color' => $colors[$event->status] ?? '#3c8dbc',
+                    // Generates the URL for the event details page
+                    'url'   => route('admin.events.show', $event->id), 
+                ];
+            });
     }
 }

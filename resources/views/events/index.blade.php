@@ -41,7 +41,6 @@
                     </p>
                 </div>
 
-                {{-- The Request Button (Always visible to users) --}}
                 @role('user')
                     <a href="{{ route('events.create') }}"
                        class="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all">
@@ -92,9 +91,24 @@
                                         <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
                                             Resources: {{ $event->resourceAllocations->count() }}
                                         </span>
-                                        @if($event->budget->count() > 0)
+                                        
+                                        {{-- NEW: Resource Logistics Total Calculation --}}
+                                        @php
+                                            $logisticsTotal = $event->resourceAllocations->sum(function($allocation) {
+                                                return $allocation->quantity * ($allocation->resource->price ?? 0);
+                                            });
+                                        @endphp
+                                        
+                                        @if($logisticsTotal > 0)
+                                            <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                                Logistics: ${{ number_format($logisticsTotal, 2) }}
+                                            </span>
+                                        @endif
+
+                                        {{-- Keep original budget if exists --}}
+                                        @if($event->budget && $event->budget->count() > 0)
                                             <span class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700">
-                                                Budget: ${{ number_format($event->budget->sum('estimated_amount'), 2) }}
+                                                Est. Budget: ${{ number_format($event->budget->sum('estimated_amount'), 2) }}
                                             </span>
                                         @endif
                                     </div>

@@ -39,4 +39,10 @@ class Participant extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function employee(): BelongsTo
+    {
+        // Ensure 'employee_id' is the actual foreign key name in your participants table
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
 }
