@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EventFormRequest;
 use App\Models\Event;
 use App\Models\Venue;
+use App\Models\Resource;
+use App\Models\Employee;
+use App\Models\Budget;
+use App\Models\EventHistory; // Added for Timeline
 use App\Services\EventService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -21,49 +26,163 @@ class EventController extends Controller
     ) {}
 
     /**
-     * Calendar index with enforced role-based visibility.
+     * Calendar index with enforced role-based visibility and latest first.
      */
     public function index(Request $request): View
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        if ($user->isAdmin()) {
-            // Admin: everything EXCEPT rejected + deleted
-            $events = Event::with(['requestedBy', 'venue'])
-                ->whereNotIn('status', ['rejected', 'deleted'])
-                ->get();
-        } else {
-            // User / Multimedia: published only
-            $events = Event::with(['requestedBy', 'venue'])
-                ->where('status', 'published')
-                ->get();
-        }
-
-        return view('events.index', compact('events'));
+    // Fetch events based on role
+    if ($user->isAdmin()) {
+        $events = Event::with(['requestedBy', 'venue'])
+            ->whereNotIn('status', ['rejected', 'deleted'])
+            ->latest() // This ensures the latest requests are at the top
+            ->get();
+    } else {
+        $events = Event::with(['requestedBy', 'venue'])
+            ->where('status', 'published')
+            ->latest()
+            ->get();
     }
 
+    return view('events.index', compact('events'));
+}
+
+    /**
+     * Include Logistics, Committee, and Finance data.
+     */
     public function create(): View
     {
         $venues = Venue::orderBy('name')->get();
-        return view('events.create', compact('venues'));
+        $resources = Resource::orderBy('name')->get(); 
+        $employees = Employee::orderBy('last_name')->get(); 
+
+        return view('events.create', compact('venues', 'resources', 'employees'));
     }
 
+    /**
+     * Comprehensive Store with Availability Check and Multi-Gate Approval.
+     */
     public function store(EventFormRequest $request): RedirectResponse
     {
-        $this->eventService->createEventRequest(
-            $request->validated(),
-            $request->user()
-        );
+        // 1. Check Venue Availability
+        $isTaken = Event::where('venue_id', $request->venue_id)
+            ->whereNotIn('status', ['rejected', 'cancelled', 'deleted'])
+            ->where(function ($query) use ($request) {
+                $query->whereBetween('start_at', [$request->start_at, $request->end_at])
+                      ->orWhereBetween('end_at', [$request->start_at, $request->end_at]);
+            })->exists();
 
-        return redirect()
-            ->route('events.index')
-            ->with('success', 'Event request submitted and pending approval.');
+        if ($isTaken) {
+            return back()->withInput()->withErrors(['venue_id' => 'The venue is already booked for these dates.']);
+        }
+
+        try {
+            $event = DB::transaction(function () use ($request) {
+                // 2. Create Event with specific Gate Booleans
+                $event = Event::create([
+                    'title' => $request->title,
+                    'description' => $request->description,
+                    'start_at' => $request->start_at,
+                    'end_at' => $request->end_at,
+                    'venue_id' => $request->venue_id,
+                    'requested_by' => Auth::id(),
+                    'status' => 'pending_approvals',
+                    'is_venue_approved' => false,
+                    'is_logistics_approved' => false,
+                    'is_finance_approved' => false,
+                ]);
+
+                // 3. Handle Logistics (Tools/Custodian items)
+                if ($request->has('resources')) {
+                    foreach ($request->resources as $resourceId => $qty) {
+                        if ($qty > 0) {
+                            $event->resourceAllocations()->create([
+                                'resource_id' => $resourceId,
+                                'quantity' => $qty,
+                            ]);
+                        }
+                    }
+                }
+
+                // 4. Handle Committee (Top handlers)
+                if ($request->has('committee')) {
+                    foreach ($request->committee as $member) {
+                        if (!empty($member['employee_id'])) {
+                            $event->participants()->create([
+                                'employee_id' => $member['employee_id'],
+                                'role' => $member['role'],
+                                'type' => 'committee',
+                            ]);
+                        }
+                    }
+                }
+
+                // 5. Handle Budget (Finance)
+                if ($request->has('budget_items')) {
+                    foreach ($request->budget_items as $item) {
+                        $event->budget()->create([
+                            'description' => $item['description'],
+                            'estimated_amount' => $item['amount'],
+                            'status' => 'pending_finance_approval',
+                        ]);
+                    }
+                }
+
+                // 6. Record Initial History
+                $event->histories()->create([
+                    'user_id' => Auth::id(),
+                    'action' => 'Request Submitted',
+                    'note' => 'Event requested. Awaiting Venue, Logistics, and Finance approvals.'
+                ]);
+
+                return $event;
+            });
+
+            return redirect()
+                ->route('events.index')
+                ->with('success', 'Event request and departmental tasks created successfully.');
+
+        } catch (\Exception $e) {
+            return back()->withInput()->withErrors('Failed to submit event: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Unified Approval for Departments (Venue, Logistics, Finance).
+     */
+    public function approveGate(Request $request, Event $event, string $gate): RedirectResponse
+    {
+        $column = "is_{$gate}_approved";
+        
+        DB::transaction(function () use ($event, $gate, $column) {
+            $event->update([$column => true]);
+
+            $event->histories()->create([
+                'user_id' => Auth::id(),
+                'action' => ucfirst($gate) . ' Approved',
+                'note' => "The $gate department has cleared their portion of the request."
+            ]);
+
+            // Auto-Approve the whole event if all 3 gates are true
+            $event->refresh();
+            if ($event->is_venue_approved && $event->is_logistics_approved && $event->is_finance_approved) {
+                $event->update(['status' => 'approved']);
+                $event->histories()->create([
+                    'user_id' => Auth::id(),
+                    'action' => 'Full Approval',
+                    'note' => 'All departmental gates cleared. Ready to publish.'
+                ]);
+            }
+        });
+
+        return back()->with('success', ucfirst($gate) . ' approval recorded.');
     }
 
     public function show(Event $event): View
     {
         $this->authorize('view', $event);
-        $event->load(['requestedBy', 'venue']);
+        $event->load(['requestedBy', 'venue', 'resourceAllocations.resource', 'budget', 'participants.employee', 'histories.user']);
 
         return view('events.show', compact('event'));
     }
@@ -73,7 +192,10 @@ class EventController extends Controller
         $this->authorize('update', $event);
 
         $venues = Venue::orderBy('name')->get();
-        return view('events.edit', compact('event', 'venues'));
+        $resources = Resource::all();
+        $employees = Employee::all();
+        
+        return view('events.edit', compact('event', 'venues', 'resources', 'employees'));
     }
 
     public function update(EventFormRequest $request, Event $event): RedirectResponse
@@ -94,12 +216,11 @@ class EventController extends Controller
     public function approve(Event $event): RedirectResponse
     {
         $this->authorize('approve', $event);
-
         $this->eventService->approveEvent($event, Auth::user());
 
         return redirect()
             ->route('events.index')
-            ->with('success', 'Event approved.');
+            ->with('success', 'Event manually approved.');
     }
 
     public function reject(Request $request, Event $event): RedirectResponse
@@ -124,7 +245,6 @@ class EventController extends Controller
     public function publish(Event $event): RedirectResponse
     {
         $this->authorize('publish', $event);
-
         $this->eventService->publishEvent($event, Auth::user());
 
         return redirect()
@@ -132,25 +252,35 @@ class EventController extends Controller
             ->with('success', 'Event published.');
     }
 
+    /**
+     * Delete including all nested departmental requests.
+     */
     public function destroy(Event $event): RedirectResponse
     {
         $this->authorize('delete', $event);
 
-        // Prefer soft delete if enabled
-        if (method_exists($event, 'delete')) {
+        DB::transaction(function () use ($event) {
+            // Delete Logistics allocations
+            $event->resourceAllocations()->delete();
+            // Delete Budget items
+            $event->budget()->delete();
+            // Delete Committee/Participants
+            $event->participants()->delete();
+            // Delete History
+            $event->histories()->delete();
+            
+            // Soft or Hard delete the event
             $event->update(['status' => 'deleted']);
             $event->delete();
-        }
+        });
 
         return redirect()
             ->route('events.index')
-            ->with('success', 'Event deleted.');
+            ->with('success', 'Event and all related departmental requests deleted.');
     }
 
     /**
-     * Admin-only bulk upload with venue_id enforcement.
-     * CSV format:
-     * title,start_at,end_at,description,venue_id
+     * Admin-only bulk upload logic.
      */
     public function bulkUpload(Request $request): RedirectResponse
     {
@@ -167,37 +297,25 @@ class EventController extends Controller
             return back()->withErrors('Unable to read uploaded file.');
         }
 
-        // Skip header
         fgetcsv($handle);
 
         $count = 0;
-
         while (($row = fgetcsv($handle)) !== false) {
-            // Stop processing when venue reference section starts
-            if (isset($row[0]) && trim($row[0]) === 'VENUE_REFERENCE') {
-                break;
-            }
-
-            // Required columns
-            if (count($row) < 5) {
-                continue;
-            }
+            if (isset($row[0]) && trim($row[0]) === 'VENUE_REFERENCE') break;
+            if (count($row) < 5) continue;
 
             [$title, $start, $end, $description, $venueId] = $row;
 
-            // Enforce venue existence
-            if (!Venue::where('id', $venueId)->exists()) {
-                continue;
-            }
+            if (!Venue::where('id', $venueId)->exists()) continue;
 
             Event::create([
-                'title'       => $title,
-                'start_at'    => $start,
-                'end_at'      => $end,
-                'description' => $description,
-                'venue_id'    => $venueId,
-                'status'      => 'pending_approval',
-                'user_id'     => Auth::id(),
+                'title'        => $title,
+                'start_at'     => $start,
+                'end_at'       => $end,
+                'description'  => $description,
+                'venue_id'     => $venueId,
+                'status'       => 'pending_approval',
+                'requested_by' => Auth::id(),
             ]);
 
             $count++;

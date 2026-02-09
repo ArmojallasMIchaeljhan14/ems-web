@@ -102,5 +102,11 @@ class Event extends Model
     return $this->belongsTo(Venue::class);
 }
 
+public function histories(): HasMany
+    {
+        // This links the event to the EventHistory model
+        return $this->hasMany(EventHistory::class)->orderBy('created_at', 'asc');
+    }
+
 
 }
