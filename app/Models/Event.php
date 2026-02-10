@@ -55,10 +55,11 @@ class Event extends Model
         return $this->hasMany(VenueBooking::class);
     }
 
-    public function resourceAllocations(): HasMany
-    {
-        return $this->hasMany(ResourceAllocation::class);
-    }
+public function resourceAllocations(): HasMany
+{
+    return $this->hasMany(ResourceAllocation::class, 'event_id', 'id');
+}
+
 
     public function invitations(): HasMany
     {

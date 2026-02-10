@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Event;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -13,24 +12,18 @@ class EventService
 {
     /**
      * -----------------------------------------------------------
-     * NEW: DASHBOARD DATA METHODS
+     * DASHBOARD DATA METHODS
      * -----------------------------------------------------------
      */
 
-    /**
-     * Get all events waiting for approval for the dashboard.
-     */
     public function getPendingEvents()
     {
         return Event::where('status', 'pending_approval')
-            ->with('requestedBy') // Eager load to avoid N+1 issues in the blade loop
+            ->with('requestedBy')
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
-    /**
-     * Get approved/published events occurring today or in the future.
-     */
     public function getUpcomingEvents()
     {
         return Event::whereIn('status', ['approved', 'published'])
@@ -39,9 +32,6 @@ class EventService
             ->get();
     }
 
-    /**
-     * Get count of all events for the stats card.
-     */
     public function getTotalEventsCount(): int
     {
         return Event::count();
@@ -49,26 +39,14 @@ class EventService
 
     /**
      * -----------------------------------------------------------
-     * EXISTING: EVENT ACTION METHODS
+     * EVENT ACTION METHODS
      * -----------------------------------------------------------
      */
 
-    /**
-     * Update Event + Logistics + Committee + Budget in one transaction.
-     *
-     * Expected $data keys:
-     * - title, description, start_at, end_at, venue_id
-     * - resources => [resource_id => qty]
-     * - committee => [ [employee_id, role], ... ]
-     * - budget_items => [ [description, amount], ... ]
-     */
     public function updateEvent(Event $event, array $data, User $user): Event
     {
         return DB::transaction(function () use ($event, $data, $user) {
 
-            // ---------------------------
-            // 1) Update main event fields
-            // ---------------------------
             $event->update([
                 'title'       => $data['title'] ?? $event->title,
                 'description' => $data['description'] ?? $event->description,
@@ -77,12 +55,11 @@ class EventService
                 'venue_id'    => $data['venue_id'] ?? $event->venue_id,
             ]);
 
-            // -----------------------------------
-            // 2) Update Logistics (resources)
-            // -----------------------------------
+            // ---------------------------
+            // Logistics (resources)
+            // ---------------------------
             if (isset($data['resources']) && is_array($data['resources'])) {
 
-                // Remove all existing then recreate cleanly (simple + safe)
                 $event->resourceAllocations()->delete();
 
                 foreach ($data['resources'] as $resourceId => $qty) {
@@ -91,18 +68,17 @@ class EventService
                     if ($qty > 0) {
                         $event->resourceAllocations()->create([
                             'resource_id' => $resourceId,
-                            'quantity' => $qty,
+                            'quantity'    => $qty,
                         ]);
                     }
                 }
             }
 
-            // -----------------------------------
-            // 3) Update Committee (participants)
-            // -----------------------------------
+            // ---------------------------
+            // Committee (participants)
+            // ---------------------------
             if (isset($data['committee']) && is_array($data['committee'])) {
 
-                // Remove old committee
                 $event->participants()->where('type', 'committee')->delete();
 
                 foreach ($data['committee'] as $member) {
@@ -116,12 +92,11 @@ class EventService
                 }
             }
 
-            // -----------------------------------
-            // 4) Update Finance (budget items)
-            // -----------------------------------
+            // ---------------------------
+            // Finance (budget items)
+            // ---------------------------
             if (isset($data['budget_items']) && is_array($data['budget_items'])) {
 
-                // Remove old items then recreate
                 $event->budget()->delete();
 
                 foreach ($data['budget_items'] as $item) {
@@ -135,9 +110,9 @@ class EventService
                 }
             }
 
-            // -----------------------------------
-            // 5) Add timeline history
-            // -----------------------------------
+            // ---------------------------
+            // Timeline history
+            // ---------------------------
             $event->histories()->create([
                 'user_id' => $user->id,
                 'action'  => 'Event Updated',
@@ -146,17 +121,14 @@ class EventService
 
             Log::info('Event updated (full update)', [
                 'event_id' => $event->id,
-                'user_id' => $user->id,
-                'title' => $event->title,
+                'user_id'  => $user->id,
+                'title'    => $event->title,
             ]);
 
             return $event;
         });
     }
 
-    /**
-     * Manual approve (admin) - sets status approved.
-     */
     public function approveEvent(Event $event, User $admin): Event
     {
         return DB::transaction(function () use ($event, $admin) {
@@ -174,16 +146,13 @@ class EventService
             Log::info('Event manually approved', [
                 'event_id' => $event->id,
                 'admin_id' => $admin->id,
-                'title' => $event->title,
+                'title'    => $event->title,
             ]);
 
             return $event;
         });
     }
 
-    /**
-     * Reject event (admin)
-     */
     public function rejectEvent(Event $event, User $admin, ?string $reason = null): Event
     {
         return DB::transaction(function () use ($event, $admin, $reason) {
@@ -203,17 +172,14 @@ class EventService
             Log::info('Event rejected', [
                 'event_id' => $event->id,
                 'admin_id' => $admin->id,
-                'title' => $event->title,
-                'reason' => $reason,
+                'title'    => $event->title,
+                'reason'   => $reason,
             ]);
 
             return $event;
         });
     }
 
-    /**
-     * Publish event (admin)
-     */
     public function publishEvent(Event $event, User $admin): Event
     {
         return DB::transaction(function () use ($event, $admin) {
@@ -235,17 +201,13 @@ class EventService
             Log::info('Event published', [
                 'event_id' => $event->id,
                 'admin_id' => $admin->id,
-                'title' => $event->title,
+                'title'    => $event->title,
             ]);
 
             return $event;
         });
     }
 
-    /**
-     * Optional: Gate-based approval helper.
-     * This matches your controller approveGate().
-     */
     public function approveGate(Event $event, string $gate, User $user): Event
     {
         $column = "is_{$gate}_approved";
@@ -288,28 +250,81 @@ class EventService
         });
     }
 
+    /**
+     * -----------------------------------------------------------
+     * CALENDAR METHODS (FullCalendar format)
+     * -----------------------------------------------------------
+     */
+
+    /**
+     * Admin calendar: show all events
+     */
     public function getAllEventsForCalendar()
     {
-        return Event::select('id', 'title', 'start_at as start', 'end_at as end', 'status')
-            ->get()
-            ->map(function ($event) {
-                // Map status to specific colors for the calendar view
-                $colors = [
-                    'pending_approval' => '#f39c12', // Orange
-                    'approved'         => '#00c0ef', // Aqua
-                    'published'        => '#00a65a', // Green
-                    'rejected'         => '#dd4b39', // Red
-                ];
+        $events = Event::query()
+            ->select('id', 'title', 'start_at', 'end_at', 'status')
+            ->orderBy('start_at')
+            ->get();
 
-                return [
-                    'id'    => $event->id,
-                    'title' => $event->title,
-                    'start' => $event->start,
-                    'end'   => $event->end,
-                    'color' => $colors[$event->status] ?? '#3c8dbc',
-                    // Generates the URL for the event details page
-                    'url'   => route('admin.events.show', $event->id), 
-                ];
-            });
+        return $this->formatEventsForCalendar($events);
+    }
+
+    /**
+     * User calendar: show user's own events + published events
+     */
+    public function getUserEventsForCalendar(User $user)
+    {
+        $events = Event::query()
+            ->select('id', 'title', 'start_at', 'end_at', 'status', 'requested_by')
+            ->where(function ($q) use ($user) {
+                $q->where('requested_by', $user->id)
+                  ->orWhere('status', 'published');
+            })
+            ->orderBy('start_at')
+            ->get();
+
+        return $this->formatEventsForCalendar($events);
+    }
+
+    /**
+     * Multimedia/other staff calendar: show only published events
+     */
+    public function getPublishedEventsForCalendar()
+    {
+        $events = Event::query()
+            ->select('id', 'title', 'start_at', 'end_at', 'status')
+            ->where('status', 'published')
+            ->orderBy('start_at')
+            ->get();
+
+        return $this->formatEventsForCalendar($events);
+    }
+
+    /**
+     * Shared formatter for FullCalendar
+     */
+    private function formatEventsForCalendar($events)
+    {
+        $colors = [
+            'pending_approval' => '#f39c12', // Orange
+            'approved'         => '#00c0ef', // Aqua
+            'published'        => '#00a65a', // Green
+            'rejected'         => '#dd4b39', // Red
+        ];
+
+        return $events->map(function ($event) use ($colors) {
+
+            return [
+                'id'     => $event->id,
+                'title'  => $event->title,
+                'start'  => $event->start_at?->toIso8601String(),
+                'end'    => $event->end_at?->toIso8601String(),
+                'status' => $event->status,
+                'color'  => $colors[$event->status] ?? '#3c8dbc',
+
+                // FIXED: correct route
+                'url'    => route('events.show', $event->id),
+            ];
+        })->values();
     }
 }

@@ -8,15 +8,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Participant extends Model
 {
-    protected $fillable = [
-        'event_id',
-        'user_id',
-        'name',
-        'email',
-        'phone',
-        'status',
-        'registered_at',
-    ];
+protected $fillable = [
+    'event_id',
+    'employee_id',  // added
+    'role',         // added
+    'type',         // added (e.g., 'committee')
+    'user_id',
+    'name',
+    'email',
+    'phone',
+    'status',
+    'registered_at',
+];
+
 
     protected function casts(): array
     {
