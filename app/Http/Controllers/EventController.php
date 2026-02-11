@@ -32,24 +32,41 @@ class EventController extends Controller
         /**
          * Calendar index with enforced role-based visibility and latest first.
          */
-         public function index(Request $request): View
-    {
-        $user = $request->user();
+        public function index(Request $request): View
+{
+    $user = $request->user();
 
-        if ($user->isAdmin()) {
-            $events = Event::with(['requestedBy', 'venue'])
-                ->whereNotIn('status', ['rejected', 'deleted'])
-                ->latest()
-                ->get();
-        } else {
-            $events = Event::with(['requestedBy', 'venue'])
-                ->where('status', 'published')
-                ->latest()
-                ->get();
-        }
+    $query = Event::with([
+        'requestedBy',
+        'venue',
+        'participants',
+        'logisticsItems',
+        'budget',
+    ])->latest();
 
-        return view('events.index', compact('events'));
+    if ($user->isAdmin()) {
+
+        // Admin sees everything except hard deleted
+        $query->whereNotIn('status', ['deleted']);
+
+    } else {
+
+        // Regular users:
+        // 1. See their own requests (any status except deleted)
+        // 2. See published events from others
+
+        $query->where(function ($q) use ($user) {
+            $q->where('requested_by', $user->id)
+              ->whereNotIn('status', ['deleted'])
+              ->orWhere('status', 'published');
+        });
     }
+
+    $events = $query->get();
+
+    return view('events.index', compact('events'));
+}
+
 
     /* =========================================================
      CREATE
@@ -213,32 +230,67 @@ class EventController extends Controller
          * Unified Approval for Departments (Venue, Logistics, Finance).
          */
         public function approveGate(Request $request, Event $event, string $gate): RedirectResponse
-        {
-            $column = "is_{$gate}_approved";
+{
+    $this->authorize('approveGate', [$event, $gate]);
 
-            DB::transaction(function () use ($event, $gate, $column) {
-                $event->update([$column => true]);
+    $validGates = ['venue', 'logistics', 'finance'];
 
-                $event->histories()->create([
-                    'user_id' => Auth::id(),
-                    'action' => ucfirst($gate) . ' Approved',
-                    'note' => "The $gate department has cleared their portion of the request."
-                ]);
+    if (!in_array($gate, $validGates)) {
+        abort(404);
+    }
 
-                // Auto-Approve the whole event if all 3 gates are true
-                $event->refresh();
-                if ($event->is_venue_approved && $event->is_logistics_approved && $event->is_finance_approved) {
-                    $event->update(['status' => 'approved']);
-                    $event->histories()->create([
-                        'user_id' => Auth::id(),
-                        'action' => 'Full Approval',
-                        'note' => 'All departmental gates cleared. Ready to publish.'
-                    ]);
-                }
-            });
+    $column = "is_{$gate}_approved";
 
-            return back()->with('success', ucfirst($gate) . ' approval recorded.');
+    DB::transaction(function () use ($event, $gate, $column) {
+
+        // ================= UPDATE GATE =================
+        $event->update([$column => true]);
+
+        $event->histories()->create([
+            'user_id' => Auth::id(),
+            'action'  => ucfirst($gate) . ' Approved',
+            'note'    => "The {$gate} department has cleared their portion of the request."
+        ]);
+
+        $event->refresh();
+
+        // ================= CHECK GATES =================
+        $allGatesApproved =
+            $event->is_venue_approved &&
+            $event->is_logistics_approved &&
+            $event->is_finance_approved;
+
+        // ================= CHECK FINANCE REQUEST =================
+        $financeApproved =
+            $event->financeRequest &&
+            $event->financeRequest->status === 'approved';
+
+        // ================= CHECK CUSTODIAN REQUESTS =================
+        $custodianApproved = true;
+
+        // If custodian requests exist, all must be approved
+        if ($event->custodianRequests()->count() > 0) {
+            $custodianApproved = !$event->custodianRequests()
+                ->where('status', '!=', 'approved')
+                ->exists();
         }
+
+        // ================= FINAL AUTO APPROVAL =================
+        if ($allGatesApproved && $financeApproved && $custodianApproved) {
+
+            $event->update(['status' => 'approved']);
+
+            $event->histories()->create([
+                'user_id' => Auth::id(),
+                'action'  => 'Full Approval',
+                'note'    => 'All gates cleared and all connected requests (Finance + Custodian) are approved.'
+            ]);
+        }
+    });
+
+    return back()->with('success', ucfirst($gate) . ' approval recorded.');
+}
+
 
         public function show(Event $event): View
             {
@@ -406,14 +458,41 @@ class EventController extends Controller
 
 
         public function approve(Event $event): RedirectResponse
-        {
-            $this->authorize('approve', $event);
-            $this->eventService->approveEvent($event, Auth::user());
+{
+    $this->authorize('approve', $event);
 
-            return redirect()
-                ->route('events.index')
-                ->with('success', 'Event manually approved.');
+    $event->load([
+        'financeRequest',
+        'custodianRequests'
+    ]);
+
+    if (!$event->canBeFullyApproved()) {
+
+        $missing = [];
+
+        if (!$event->is_venue_approved) $missing[] = "Venue Approval";
+        if (!$event->is_logistics_approved) $missing[] = "Logistics Approval";
+        if (!$event->is_finance_approved) $missing[] = "Finance Gate Approval";
+
+        if (!$event->isFinanceRequestApproved()) {
+            $missing[] = "Finance Request Approval";
         }
+
+        if (!$event->isCustodianApproved()) {
+            $missing[] = "Custodian Request Approval";
+        }
+
+        return back()->withErrors(
+            "Cannot approve event yet. Missing: " . implode(", ", $missing)
+        );
+    }
+
+    $this->eventService->approveEvent($event, Auth::user());
+
+    return redirect()
+        ->route('events.index')
+        ->with('success', 'Event approved successfully.');
+}
 
         public function reject(Request $request, Event $event): RedirectResponse
         {
@@ -434,15 +513,25 @@ class EventController extends Controller
                 ->with('success', 'Event rejected.');
         }
 
-        public function publish(Event $event): RedirectResponse
-        {
-            $this->authorize('publish', $event);
-            $this->eventService->publishEvent($event, Auth::user());
+public function publish(Event $event): RedirectResponse
+{
+    $this->authorize('publish', $event);
 
-            return redirect()
-                ->route('events.index')
-                ->with('success', 'Event published.');
-        }
+    if (
+        !$event->isFinanceApproved() ||
+        !$event->isCustodianApproved()
+    ) {
+        return back()->withErrors(
+            'Event cannot be published. Finance or Custodian request is still pending.'
+        );
+    }
+
+    $this->eventService->publishEvent($event, Auth::user());
+
+    return redirect()
+        ->route('events.index')
+        ->with('success', 'Event published.');
+}
 
 public function destroy(Event $event): RedirectResponse
 {

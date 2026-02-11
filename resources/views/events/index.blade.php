@@ -28,24 +28,62 @@
         </a>
     </div>
 
-
     {{-- ================= EVENTS LIST ================= --}}
     <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
 
         @forelse($events as $event)
 
             @php
+                // ================= COUNTS =================
                 $committeeCount = $event->participants->count();
-                $logisticsCount = $event->resourceAllocations->count();
+                $logisticsCount = $event->logisticsItems->count();
                 $budgetCount = $event->budget->count();
 
-                // FIXED: use stored unit_price (from your new form)
-                $logisticsTotal = $event->resourceAllocations->sum(function($item){
-                    return $item->quantity * ($item->unit_price ?? 0);
-                });
-
+                // ================= TOTALS =================
+                $logisticsTotal = $event->logisticsItems->sum('subtotal');
                 $budgetTotal = $event->budget->sum('estimated_amount');
+
                 $grandTotal = $logisticsTotal + $budgetTotal;
+
+                // ================= APPROVAL CONDITIONS =================
+
+                // Logistics gate must be approved
+                $logisticsApproved = $event->is_logistics_approved;
+
+                // Finance request must exist AND be approved
+                $financeApproved =
+                    $event->financeRequest &&
+                    strtolower(trim($event->financeRequest->status)) === 'approved';
+
+                // Custodian requests:
+                // - If none exists, treat as approved
+                // - If exists, all must be approved
+                $custodianCount = $event->custodianRequests->count();
+
+                $custodianApproved = true;
+                if ($custodianCount > 0) {
+                    $custodianApproved = $event->custodianRequests
+                        ->where('status', '!=', 'approved')
+                        ->count() === 0;
+                }
+
+                // Final requirement before event can be approved
+                $canApproveEvent = $logisticsApproved && $financeApproved && $custodianApproved;
+
+                // Build a readable blocked message
+                $blockedReasons = [];
+
+                if (!$logisticsApproved) $blockedReasons[] = "Logistics gate is still pending.";
+                if (!$event->financeRequest) {
+                    $blockedReasons[] = "Finance request is missing.";
+                } elseif (!$financeApproved) {
+                    $blockedReasons[] = "Finance request is not yet approved.";
+                }
+                if ($custodianCount > 0 && !$custodianApproved) {
+                    $blockedReasons[] = "Custodian request(s) are not yet approved.";
+                }
+
+                $blockedText = implode(" ", $blockedReasons);
             @endphp
 
             <div class="relative flex flex-col gap-6 px-6 py-6 border-b last:border-0 hover:bg-gray-50 lg:flex-row lg:items-center">
@@ -62,6 +100,7 @@
                         <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset
                             @switch($event->status)
                                 @case('pending_approval') bg-yellow-50 text-yellow-800 ring-yellow-600/20 @break
+                                @case('pending_approvals') bg-yellow-50 text-yellow-800 ring-yellow-600/20 @break
                                 @case('approved') bg-blue-50 text-blue-700 ring-blue-700/10 @break
                                 @case('published') bg-green-50 text-green-700 ring-green-600/20 @break
                                 @default bg-gray-50 text-gray-600 ring-gray-500/10
@@ -101,51 +140,91 @@
                         @if($logisticsTotal > 0)
                             <span class="badge bg-green-50 text-green-700">
                                 Logistics Total:
-                                ₱{{ number_format($logisticsTotal,2) }}
+                                ₱{{ number_format($logisticsTotal, 2) }}
                             </span>
                         @endif
 
                         @if($budgetTotal > 0)
                             <span class="badge bg-indigo-50 text-indigo-700">
                                 Budget Total:
-                                ₱{{ number_format($budgetTotal,2) }}
+                                ₱{{ number_format($budgetTotal, 2) }}
                             </span>
                         @endif
 
                         @if($grandTotal > 0)
                             <span class="badge bg-purple-50 text-purple-700 font-semibold">
                                 Grand Total:
-                                ₱{{ number_format($grandTotal,2) }}
+                                ₱{{ number_format($grandTotal, 2) }}
                             </span>
                         @endif
                     </div>
-                </div>
 
+                    {{-- ================= GATE STATUS ================= --}}
+                    <div class="mt-3 flex flex-wrap gap-2 text-xs">
+
+                        <span class="badge {{ $logisticsApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700' }}">
+                            Logistics: {{ $logisticsApproved ? 'Approved' : 'Pending' }}
+                        </span>
+
+                        <span class="badge {{ $financeApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700' }}">
+                            Finance Request: {{ $financeApproved ? 'Approved' : 'Pending' }}
+                        </span>
+
+                        <span class="badge {{ $custodianApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700' }}">
+                            Custodian: {{ $custodianApproved ? 'Approved' : 'Pending' }}
+                        </span>
+                    </div>
+
+                </div>
 
                 {{-- RIGHT ACTIONS --}}
                 <div class="flex flex-wrap gap-2 lg:mt-0">
 
                     <a href="{{ route('events.show', $event) }}"
-                       class="btn-secondary">
+                       class="btn-secondary text-violet-600">
                         View Details
                     </a>
 
                     @role('admin')
 
-                        @if($event->status === 'pending_approval')
+                        {{-- ================= APPROVE/REJECT (PENDING ONLY) ================= --}}
+                        @if($event->status === 'pending_approval' || $event->status === 'pending_approvals')
 
-                            <button
-                                @click="setupModal(
-                                    '{{ route('events.approve', $event) }}',
-                                    'Approve Event Request',
-                                    'Confirm approval? This notifies the requester and locks the venue.',
-                                    'Approve',
-                                    'green'
-                                )"
-                                class="btn-success">
-                                Approve
-                            </button>
+                            {{-- APPROVE BUTTON (BLOCKED UNTIL REQUESTS APPROVED) --}}
+                            @if($canApproveEvent)
 
+                                <button
+                                    @click="setupModal(
+                                        '{{ route('events.approve', $event) }}',
+                                        'Approve Event Request',
+                                        'Confirm approval? This will mark the event as approved and ready to publish.',
+                                        'Approve',
+                                        'green'
+                                    )"
+                                    class="btn-success">
+                                    Approve
+                                </button>
+
+                            @else
+
+                                <button
+                                    @click="setupModal(
+                                        '',
+                                        'Approval Blocked',
+                                        '{{ $blockedText ?: "Some required approvals are still pending." }}',
+                                        'Understood',
+                                        'gray',
+                                        false,
+                                        true
+                                    )"
+                                    class="btn-disabled">
+                                    Approve
+                                </button>
+
+                            @endif
+
+
+                            {{-- REJECT BUTTON ALWAYS ALLOWED --}}
                             <button
                                 @click="setupModal(
                                     '{{ route('events.reject', $event) }}',
@@ -160,7 +239,7 @@
 
                         @endif
 
-
+                        {{-- ================= PUBLISH (APPROVED ONLY) ================= --}}
                         @if($event->status === 'approved')
 
                             <button
@@ -177,7 +256,7 @@
 
                         @endif
 
-
+                        {{-- ================= DELETE ================= --}}
                         @if($event->status === 'published')
 
                             <button
@@ -205,7 +284,7 @@
                                     'red',
                                     true
                                 )"
-                                class="btn-danger-outline">
+                                class="btn-danger-outline text-red-600">
                                 Delete
                             </button>
 
@@ -222,7 +301,6 @@
         @endforelse
 
     </div>
-
 
     {{-- ================= MODAL ================= --}}
     <div x-show="showModal"
@@ -268,7 +346,6 @@
     </div>
 </div>
 
-
 {{-- ================= ALPINE ================= --}}
 <script>
 function eventIndex(){
@@ -296,14 +373,13 @@ function eventIndex(){
 }
 </script>
 
-
 {{-- ================= REUSABLE BUTTON STYLES ================= --}}
 <style>
 .badge{ @apply px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-md; }
 .btn-primary{ @apply px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-500; }
 .btn-success{ @apply px-3 py-1.5 bg-green-600 text-white text-xs rounded-md hover:bg-green-500; }
 .btn-danger{ @apply px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-500; }
-.btn-danger-outline{ @apply px-3 py-1.5 border border-red-500 text-red-600 text-xs rounded-md hover:bg-red-50; }
+.btn-danger-outline{ @apply px-3 py--1.5 border border-red-500 text-red-600 text-xs rounded-md hover:bg-red-50; }
 .btn-secondary{ @apply px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-md hover:bg-gray-200; }
 .btn-disabled{ @apply px-3 py-1.5 bg-gray-100 text-gray-400 text-xs rounded-md cursor-not-allowed; }
 </style>

@@ -134,6 +134,31 @@ public function logisticsItems()
     return $this->hasMany(EventLogisticsItem::class);
 }
 
+public function isFinanceRequestApproved(): bool
+{
+    return $this->financeRequest
+        && $this->financeRequest->status === 'approved';
+}
+
+public function isCustodianApproved(): bool
+{
+    // If no custodian requests, treat as approved
+    if ($this->custodianRequests->count() === 0) {
+        return true;
+    }
+
+    // All must be approved
+    return $this->custodianRequests->every(fn($r) => $r->status === 'approved');
+}
+
+public function canBeFullyApproved(): bool
+{
+    return $this->is_venue_approved
+        && $this->is_logistics_approved
+        && $this->is_finance_approved
+        && $this->isFinanceRequestApproved()
+        && $this->isCustodianApproved();
+}
 
 
 }
