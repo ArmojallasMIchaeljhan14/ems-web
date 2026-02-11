@@ -128,4 +128,12 @@ public function resourceAllocations(): HasMany
     {
         return $this->hasOne(EventFinanceRequest::class);
     }
+
+public function logisticsItems()
+{
+    return $this->hasMany(EventLogisticsItem::class);
+}
+
+
+
 }

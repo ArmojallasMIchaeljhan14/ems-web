@@ -62,35 +62,30 @@
         </div>
 
         {{-- Detail Grid --}}
-        <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
 
-            {{-- Budget --}}
+           
+
+            {{-- UPDATED LOGISTICS SECTION --}}
             <div class="bg-white border rounded-lg p-5 shadow">
-                <h4 class="font-bold mb-3">Budget Items</h4>
+                <h4 class="font-bold mb-3">Logistics Items</h4>
 
-                @forelse($event->budget as $item)
-                    <div class="flex justify-between text-sm mb-1">
-                        <span>{{ $item->description }}</span>
-                        <span class="font-semibold">
-                            ₱{{ number_format($item->estimated_amount, 2) }}
-                        </span>
+                @forelse($event->logisticsItems as $item)
+                    <div class="mb-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="font-semibold">
+                                {{ $item->quantity }}× {{ $item->description }}
+                            </span>
+                            <span>
+                                ₱{{ number_format($item->subtotal, 2) }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            Unit Price: ₱{{ number_format($item->unit_price, 2) }}
+                        </div>
                     </div>
                 @empty
-                    <p class="text-xs italic text-gray-400">No budget items.</p>
-                @endforelse
-            </div>
-
-            {{-- Resources --}}
-            <div class="bg-white border rounded-lg p-5 shadow">
-                <h4 class="font-bold mb-3">Logistics Resources</h4>
-
-                @forelse($event->resourceAllocations as $allocation)
-                    <div class="flex gap-2 text-sm mb-1">
-                        <span class="font-bold">{{ $allocation->quantity }}×</span>
-                        <span>{{ $allocation->resource->name ?? 'Resource' }}</span>
-                    </div>
-                @empty
-                    <p class="text-xs italic text-gray-400">No resources requested.</p>
+                    <p class="text-xs italic text-gray-400">No logistics items.</p>
                 @endforelse
             </div>
 

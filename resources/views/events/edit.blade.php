@@ -1,209 +1,274 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Edit Event Request') }}: <span class="text-indigo-600">{{ $event->title }}</span>
-            </h2>
-            <a href="{{ route('events.show', $event) }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 transition">
-                &larr; Back to Details
-            </a>
-        </div>
-    </x-slot>
+<x-slot name="header">
+    <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-xl text-gray-800">
+            Edit Event Request
+        </h2>
 
-    <div class="py-10" x-data="eventForm()">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            
-            {{-- Validation Errors --}}
-            @if ($errors->any())
-                <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
-                    <ul class="list-disc list-inside text-sm text-red-700">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('events.update', $event) }}" class="space-y-6">
-                @csrf
-                @method('PUT')
-
-                {{-- 1. BASIC DETAILS --}}
-                <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">1. General Information</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                            <input type="text" name="title" value="{{ old('title', $event->title) }}" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-                            <select name="venue_id" class="w-full rounded-lg border-gray-300">
-                                @foreach($venues as $venue)
-                                    <option value="{{ $venue->id }}" {{ old('venue_id', $event->venue_id) == $venue->id ? 'selected' : '' }}>{{ $venue->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase">Start</label>
-                                <input type="datetime-local" name="start_at" value="{{ old('start_at', optional($event->start_at)->format('Y-m-d\TH:i')) }}" class="w-full rounded-lg border-gray-300 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase">End</label>
-                                <input type="datetime-local" name="end_at" value="{{ old('end_at', optional($event->end_at)->format('Y-m-d\TH:i')) }}" class="w-full rounded-lg border-gray-300 text-sm">
-                            </div>
-                        </div>
-                        {{-- RE-ADDED DESCRIPTION --}}
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                            <textarea name="description" rows="4" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500" placeholder="Describe the purpose and flow of the event...">{{ old('description', $event->description) }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 2. LOGISTICS REPEATER (Triggers Budget) --}}
-                <div class="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-4 border-b pb-2">
-                        <h3 class="text-lg font-bold text-gray-900">2. Logistics (Resources)</h3>
-                        <button type="button" @click="addRow('logistics')" class="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold uppercase hover:bg-indigo-700">
-                            + Add Item
-                        </button>
-                    </div>
-                    <div class="space-y-3">
-                        <template x-for="(row, index) in logistics" :key="index">
-                            <div class="flex flex-col md:flex-row gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <div class="flex-1">
-                                    <label class="text-[10px] uppercase font-bold text-gray-500">Resource</label>
-                                    <select :name="`logistics_items[${index}][resource_id]`" x-model="row.resource_id" @change="updateBudget" class="w-full rounded-md border-gray-300 text-sm">
-                                        <option value="">-- Select Resource --</option>
-                                        @foreach($resources as $resource)
-                                            <option value="{{ $resource->id }}">{{ $resource->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="w-full md:w-32">
-                                    <label class="text-[10px] uppercase font-bold text-gray-500">Qty</label>
-                                    <input type="number" min="1" :name="`logistics_items[${index}][quantity]`" x-model="row.quantity" @input="updateBudget" class="w-full rounded-md border-gray-300 text-sm">
-                                </div>
-                                <div class="flex items-end">
-                                    <button type="button" @click="removeRow('logistics', index)" class="p-2 text-red-600 hover:bg-red-50 rounded-md">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                {{-- 3. CUSTODIAN REPEATER --}}
-                <div class="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-4 border-b pb-2">
-                        <h3 class="text-lg font-bold text-gray-900">3. Custodian Equipment</h3>
-                        <button type="button" @click="addRow('custodian')" class="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold uppercase hover:bg-indigo-700">
-                            + Add Equipment
-                        </button>
-                    </div>
-                    <div class="space-y-3">
-                        <template x-for="(row, index) in custodian" :key="index">
-                            <div class="flex flex-col md:flex-row gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <div class="flex-1">
-                                    <label class="text-[10px] uppercase font-bold text-gray-500">Material Name</label>
-                                    <select :name="`custodian_items[${index}][material_id]`" x-model="row.material_id" class="w-full rounded-md border-gray-300 text-sm">
-                                        <option value="">-- Select Material --</option>
-                                        @foreach($custodianMaterials as $material)
-                                            <option value="{{ $material->id }}">{{ $material->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="w-full md:w-32">
-                                    <label class="text-[10px] uppercase font-bold text-gray-500">Qty</label>
-                                    <input type="number" min="1" :name="`custodian_items[${index}][quantity]`" x-model="row.quantity" class="w-full rounded-md border-gray-300 text-sm">
-                                </div>
-                                <div class="flex items-end">
-                                    <button type="button" @click="removeRow('custodian', index)" class="p-2 text-red-600 hover:bg-red-50 rounded-md">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                {{-- 4. BUDGET SUMMARY (READ-ONLY) --}}
-                <div class="bg-indigo-50/50 shadow-sm rounded-xl border border-indigo-100 p-6">
-                    <div class="flex items-center justify-between mb-4 border-b border-indigo-200 pb-2">
-                        <h3 class="text-lg font-bold text-indigo-900">4. Financial Summary</h3>
-                        <span class="text-[10px] font-black uppercase text-indigo-500 bg-white px-2 py-1 rounded shadow-sm">Locked • Auto-calculated</span>
-                    </div>
-                    <div class="space-y-2">
-                        <template x-for="(item, index) in budget" :key="index">
-                            <div class="flex justify-between py-2 border-b border-indigo-100 text-sm italic">
-                                <span class="text-gray-600" x-text="item.description"></span>
-                                <span class="font-mono font-bold text-gray-900">₱<span x-text="item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})"></span></span>
-                                <input type="hidden" :name="`budget_items[${index}][description]`" :value="item.description">
-                                <input type="hidden" :name="`budget_items[${index}][amount]`" :value="item.amount">
-                            </div>
-                        </template>
-                        <div class="flex justify-between pt-4 font-bold text-xl text-indigo-700">
-                            <span>Estimated Total:</span>
-                            <span>₱<span x-text="totalBudget.toLocaleString(undefined, {minimumFractionDigits: 2})"></span></span>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ACTIONS --}}
-                <div class="flex items-center justify-end space-x-4 bg-white p-6 rounded-xl border border-gray-200">
-                    <a href="{{ route('events.show', $event) }}" class="text-sm font-semibold text-gray-500 hover:text-gray-700">Discard Changes</a>
-                    <button type="submit" class="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-md">
-                        Update Event Request
-                    </button>
-                </div>
-            </form>
-        </div>
+        <a href="{{ route('events.show', $event) }}"
+           class="inline-flex items-center px-4 py-2 bg-gray-100 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-200 transition">
+            Back
+        </a>
     </div>
+</x-slot>
 
-    <script>
-        function eventForm() {
-            return {
-                logistics: {!! json_encode(old('logistics_items', $event->resourceAllocations->map(fn($a) => ['resource_id' => $a->resource_id, 'quantity' => $a->quantity]))) !!},
-                custodian: {!! json_encode(old('custodian_items', $event->custodianRequests->map(fn($c) => ['material_id' => $c->custodian_material_id, 'quantity' => $c->quantity]))) !!},
-                budget: [],
-                resourceMap: {!! json_encode($resources->keyBy('id')) !!},
+<div class="py-10" x-data="eventForm">
+<div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
 
-                init() {
-                    this.updateBudget();
-                },
+<form method="POST" action="{{ route('events.update', $event) }}"
+      class="bg-white shadow-sm rounded-xl border border-gray-200">
+@csrf
+@method('PUT')
 
-                addRow(type) {
-                    if (type === 'logistics') this.logistics.push({ resource_id: '', quantity: 1 });
-                    if (type === 'custodian') this.custodian.push({ material_id: '', quantity: 1 });
-                },
+<div class="p-6 space-y-10">
 
-                removeRow(type, index) {
-                    this[type].splice(index, 1);
-                    if (type === 'logistics') this.updateBudget();
-                },
+{{-- ================= BASIC DETAILS ================= --}}
+<div>
+<h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">
+Event Details
+</h3>
 
-                updateBudget() {
-                    let newBudget = [];
-                    this.logistics.forEach(item => {
-                        if (item.resource_id && this.resourceMap[item.resource_id]) {
-                            let res = this.resourceMap[item.resource_id];
-                            let price = res.price || 0; 
-                            newBudget.push({
-                                description: `Allocation: ${res.name} (x${item.quantity})`,
-                                amount: price * item.quantity
-                            });
-                        }
-                    });
-                    this.budget = newBudget;
-                },
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-                get totalBudget() {
-                    return this.budget.reduce((sum, item) => sum + item.amount, 0);
-                }
-            }
-        }
-    </script>
+<input type="text"
+       name="title"
+       value="{{ old('title', $event->title) }}"
+       class="w-full rounded-lg border-gray-300 md:col-span-2">
+
+<select name="venue_id"
+        class="w-full rounded-lg border-gray-300">
+    @foreach($venues as $venue)
+        <option value="{{ $venue->id }}"
+            {{ old('venue_id', $event->venue_id) == $venue->id ? 'selected' : '' }}>
+            {{ $venue->name }}
+        </option>
+    @endforeach
+</select>
+
+<input type="datetime-local"
+       name="start_at"
+       value="{{ old('start_at', $event->start_at->format('Y-m-d\TH:i')) }}"
+       class="w-full rounded-lg border-gray-300">
+
+<input type="datetime-local"
+       name="end_at"
+       value="{{ old('end_at', $event->end_at->format('Y-m-d\TH:i')) }}"
+       class="w-full rounded-lg border-gray-300">
+
+<textarea name="description"
+          rows="4"
+          class="w-full rounded-lg border-gray-300 md:col-span-2">{{ old('description', $event->description) }}</textarea>
+
+</div>
+</div>
+
+{{-- ================= LOGISTICS ================= --}}
+<div x-data="logisticsRepeater">
+<h3 class="text-lg font-bold text-gray-900 mb-4">
+Logistics & Budget
+</h3>
+
+<template x-for="(row, index) in rows" :key="index">
+<div class="grid grid-cols-12 gap-4 p-4 bg-gray-50 rounded-xl border items-end mb-3">
+
+<div class="col-span-5">
+<input type="text"
+       :name="`logistics_items[${index}][resource_name]`"
+       x-model="row.resource_name"
+       class="w-full rounded-lg border-gray-300">
+</div>
+
+<div class="col-span-2">
+<input type="number"
+       min="1"
+       :name="`logistics_items[${index}][quantity]`"
+       x-model.number="row.quantity"
+       class="w-full rounded-lg border-gray-300">
+</div>
+
+<div class="col-span-2">
+<input type="number"
+       step="0.01"
+       :name="`logistics_items[${index}][unit_price]`"
+       x-model.number="row.unit_price"
+       class="w-full rounded-lg border-gray-300">
+</div>
+
+<div class="col-span-2 text-right font-bold">
+₱<span x-text="formatNumber(row.quantity * row.unit_price)"></span>
+</div>
+
+<div class="col-span-1 text-right">
+<button type="button"
+        @click="removeRow(index)"
+        class="text-red-500">✕</button>
+</div>
+
+</div>
+</template>
+
+<button type="button"
+        @click="addRow()"
+        class="text-indigo-600 text-sm font-bold">
++ Add Item
+</button>
+
+<div class="mt-4 text-right font-bold text-xl text-indigo-600">
+₱<span x-text="formatNumber(calculateTotal())"></span>
+</div>
+
+</div>
+
+{{-- ================= CUSTODIAN ================= --}}
+<div x-data="custodianRepeater">
+<h3 class="text-lg font-bold text-gray-900 mb-4">
+Custodian Equipment
+</h3>
+
+<template x-for="(row, index) in rows" :key="index">
+<div class="grid grid-cols-3 gap-4 mb-3">
+
+<select :name="`custodian_items[${index}][material_id]`"
+        x-model="row.material_id"
+        class="rounded-lg border-gray-300">
+    <option value="">Select</option>
+    @foreach($custodianMaterials as $mat)
+        <option value="{{ $mat->id }}">
+            {{ $mat->name }}
+        </option>
+    @endforeach
+</select>
+
+<input type="number"
+       min="1"
+       :name="`custodian_items[${index}][quantity]`"
+       x-model.number="row.quantity"
+       class="rounded-lg border-gray-300">
+
+<button type="button"
+        @click="removeRow(index)"
+        class="text-red-600">Remove</button>
+
+</div>
+</template>
+
+<button type="button"
+        @click="addRow()"
+        class="text-indigo-600 text-sm font-bold">
++ Add Equipment
+</button>
+
+</div>
+
+{{-- ================= COMMITTEE ================= --}}
+<div x-data="committeeRepeater">
+<h3 class="text-lg font-bold text-gray-900 mb-4">
+Committee
+</h3>
+
+<template x-for="(row, index) in rows" :key="index">
+<div class="grid grid-cols-2 gap-4 mb-3">
+
+<select :name="`committee[${index}][employee_id]`"
+        x-model="row.employee_id"
+        class="rounded-lg border-gray-300">
+    <option value="">Select</option>
+    @foreach($employees as $emp)
+        <option value="{{ $emp->id }}">
+            {{ $emp->last_name }}, {{ $emp->first_name }}
+        </option>
+    @endforeach
+</select>
+
+<input type="text"
+       :name="`committee[${index}][role]`"
+       x-model="row.role"
+       class="rounded-lg border-gray-300">
+
+</div>
+</template>
+
+<button type="button"
+        @click="addRow()"
+        class="text-indigo-600 text-sm font-bold">
++ Add Member
+</button>
+
+</div>
+
+</div>
+
+<div class="px-6 py-4 border-t bg-gray-50 text-right">
+<button type="submit"
+        class="px-4 py-2 bg-indigo-600 text-white rounded-md text-xs font-semibold uppercase">
+Update Request
+</button>
+</div>
+
+</form>
+</div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+
+Alpine.data('eventForm', () => ({
+formatNumber(val) {
+return new Intl.NumberFormat('en-PH',{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+}).format(val || 0);
+}
+}));
+
+/* ================= LOGISTICS FIX ================= */
+Alpine.data('logisticsRepeater', () => ({
+rows: {!! json_encode(
+old('logistics_items',
+$event->logisticsItems->map(fn($l)=>[
+'resource_name'=>$l->description,
+'quantity'=>$l->quantity,
+'unit_price'=>$l->unit_price
+])->values()
+)
+) !!},
+
+addRow(){ this.rows.push({resource_name:'',quantity:1,unit_price:0}) },
+removeRow(i){ if(this.rows.length>1) this.rows.splice(i,1) },
+calculateTotal(){
+return this.rows.reduce((sum,row)=>{
+return sum+(parseFloat(row.quantity||0)*parseFloat(row.unit_price||0))
+},0);
+}
+}));
+
+Alpine.data('custodianRepeater', () => ({
+rows: {!! json_encode(
+old('custodian_items',
+$event->custodianRequests->map(fn($c)=>[
+'material_id'=>$c->custodian_material_id,
+'quantity'=>$c->quantity
+])->values()
+)
+) !!},
+addRow(){ this.rows.push({material_id:'',quantity:1}) },
+removeRow(i){ if(this.rows.length>1) this.rows.splice(i,1) }
+}));
+
+Alpine.data('committeeRepeater', () => ({
+rows: {!! json_encode(
+old('committee',
+$event->participants->map(fn($p)=>[
+'employee_id'=>$p->employee_id,
+'role'=>$p->role
+])->values()
+)
+) !!},
+addRow(){ this.rows.push({employee_id:'',role:''}) },
+removeRow(i){ if(this.rows.length>1) this.rows.splice(i,1) }
+}));
+
+});
+</script>
+
 </x-app-layout>

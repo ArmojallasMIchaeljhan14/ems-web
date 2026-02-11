@@ -8,62 +8,93 @@ class EventFormRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Authorization is handled by Policy in controller
+        // Authorization handled in controller or policy
         return true;
     }
 
     public function rules(): array
     {
         $rules = [
-            // ===================== BASIC EVENT DETAILS =====================
+
+            /**
+             * =====================================================
+             * BASIC EVENT DETAILS
+             * =====================================================
+             */
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'venue_id' => ['required', 'exists:venues,id'],
 
             'start_at' => ['required', 'date'],
             'end_at' => ['required', 'date', 'after:start_at'],
+
+            /**
+             * =====================================================
+             * LOGISTICS ITEMS (MANUAL ENTRY)
+             * logistics_items[0][resource_name]
+             * logistics_items[0][quantity]
+             * logistics_items[0][unit_price]
+             * =====================================================
+             */
+            'logistics_items' => ['nullable', 'array'],
+            'logistics_items.*.resource_name' => ['required_with:logistics_items.*.quantity', 'nullable', 'string', 'max:255'],
+            'logistics_items.*.quantity' => ['nullable', 'integer', 'min:1'],
+            'logistics_items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+
+            /**
+             * =====================================================
+             * CUSTODIAN EQUIPMENT
+             * custodian_items[0][material_id]
+             * custodian_items[0][quantity]
+             * =====================================================
+             */
+            'custodian_items' => ['nullable', 'array'],
+            'custodian_items.*.material_id' => ['nullable', 'exists:custodian_materials,id'],
+            'custodian_items.*.quantity' => ['nullable', 'integer', 'min:1'],
+
+            /**
+             * =====================================================
+             * COMMITTEE MEMBERS
+             * committee[0][employee_id]
+             * committee[0][role]
+             * =====================================================
+             */
+            'committee' => ['nullable', 'array'],
+            'committee.*.employee_id' => ['nullable', 'exists:employees,id'],
+            'committee.*.role' => ['nullable', 'string', 'max:255'],
+
+            /**
+             * =====================================================
+             * OPTIONAL MANUAL BUDGET ITEMS (If you still use this)
+             * budget_items[0][description]
+             * budget_items[0][amount]
+             * =====================================================
+             */
+            'budget_items' => ['nullable', 'array'],
+            'budget_items.*.description' => ['nullable', 'string', 'max:255'],
+            'budget_items.*.amount' => ['nullable', 'numeric', 'min:0'],
         ];
 
         /**
-         * For CREATE (POST):
-         * start_at must be in the future
+         * =====================================================
+         * CREATE ONLY (POST)
+         * =====================================================
          */
         if ($this->isMethod('POST')) {
             $rules['start_at'][] = 'after:now';
         }
 
-        // ===================== LOGISTICS (RESOURCES) =====================
-        // Example: resources[1] = 3
-        $rules['resources'] = ['nullable', 'array'];
-        $rules['resources.*'] = ['nullable', 'integer', 'min:0'];
-
-        // ===================== CUSTODIAN EQUIPMENT =====================
-        // Example: equipment[2] = 10 (chairs, tables, speakers)
-        // You will connect this later to custodian_materials table.
-        $rules['equipment'] = ['nullable', 'array'];
-        $rules['equipment.*'] = ['nullable', 'integer', 'min:0'];
-
-        // ===================== COMMITTEE =====================
-        // committee[0][employee_id], committee[0][role]
-        $rules['committee'] = ['nullable', 'array'];
-        $rules['committee.*.employee_id'] = ['nullable', 'exists:employees,id'];
-        $rules['committee.*.role'] = ['nullable', 'string', 'max:255'];
-
-        // ===================== BUDGET ITEMS =====================
-        // budget_items[0][description], budget_items[0][amount]
-        $rules['budget_items'] = ['nullable', 'array'];
-        $rules['budget_items.*.description'] = ['nullable', 'string', 'max:255'];
-        $rules['budget_items.*.amount'] = ['nullable', 'numeric', 'min:0'];
-
         /**
-         * Admin-only editing rules (PUT/PATCH)
+         * =====================================================
+         * ADMIN UPDATE ONLY (PUT / PATCH)
+         * =====================================================
          */
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
             $rules['status'] = [
                 'nullable',
                 'string',
                 'in:' . implode(',', [
-                    'pending_approvals',
+                    'pending_approval',
                     'approved',
                     'rejected',
                     'published',
@@ -80,48 +111,68 @@ class EventFormRequest extends FormRequest
     public function messages(): array
     {
         return [
+
+            /**
+             * BASIC
+             */
             'title.required' => 'Event title is required.',
             'description.required' => 'Event description is required.',
-
             'venue_id.required' => 'Venue is required.',
             'venue_id.exists' => 'Selected venue does not exist.',
-
             'start_at.required' => 'Start date and time is required.',
             'start_at.after' => 'Event start time must be in the future.',
-
             'end_at.required' => 'End date and time is required.',
             'end_at.after' => 'Event end time must be after start time.',
 
-            'resources.array' => 'Invalid logistics resources format.',
-            'resources.*.integer' => 'Logistics resource quantity must be a number.',
-            'resources.*.min' => 'Logistics resource quantity cannot be negative.',
+            /**
+             * LOGISTICS
+             */
+            'logistics_items.array' => 'Invalid logistics format.',
+            'logistics_items.*.resource_name.required_with' => 'Logistics item name is required.',
+            'logistics_items.*.quantity.integer' => 'Logistics quantity must be a number.',
+            'logistics_items.*.quantity.min' => 'Logistics quantity must be at least 1.',
+            'logistics_items.*.unit_price.numeric' => 'Unit price must be a valid number.',
+            'logistics_items.*.unit_price.min' => 'Unit price cannot be negative.',
 
-            'equipment.array' => 'Invalid equipment request format.',
-            'equipment.*.integer' => 'Equipment quantity must be a number.',
-            'equipment.*.min' => 'Equipment quantity cannot be negative.',
+            /**
+             * CUSTODIAN
+             */
+            'custodian_items.array' => 'Invalid custodian request format.',
+            'custodian_items.*.material_id.exists' => 'Selected equipment is invalid.',
+            'custodian_items.*.quantity.integer' => 'Equipment quantity must be a number.',
+            'custodian_items.*.quantity.min' => 'Equipment quantity must be at least 1.',
 
+            /**
+             * COMMITTEE
+             */
             'committee.array' => 'Invalid committee format.',
             'committee.*.employee_id.exists' => 'Selected committee employee is invalid.',
             'committee.*.role.max' => 'Committee role must not exceed 255 characters.',
 
+            /**
+             * BUDGET
+             */
             'budget_items.array' => 'Invalid budget format.',
             'budget_items.*.amount.numeric' => 'Budget amount must be a valid number.',
             'budget_items.*.amount.min' => 'Budget amount cannot be negative.',
 
+            /**
+             * STATUS
+             */
             'status.in' => 'Invalid event status.',
         ];
     }
 
     /**
-     * Optional cleanup:
-     * Normalize empty strings in arrays to null
+     * =====================================================
+     * CLEAN INPUT NORMALIZATION
+     * =====================================================
      */
     protected function prepareForValidation(): void
     {
-        // If any empty arrays come in, normalize them
         $this->merge([
-            'resources' => $this->resources ?? [],
-            'equipment' => $this->equipment ?? [],
+            'logistics_items' => $this->logistics_items ?? [],
+            'custodian_items' => $this->custodian_items ?? [],
             'committee' => $this->committee ?? [],
             'budget_items' => $this->budget_items ?? [],
         ]);
