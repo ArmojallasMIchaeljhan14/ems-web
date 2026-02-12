@@ -22,8 +22,6 @@ class OtpVerificationController extends Controller
 
     private const ATTEMPT_DECAY_SECONDS = 900; // 15 minutes
 
-    private const RESEND_THROTTLE_SECONDS = 30;
-
     public function create(Request $request): View|RedirectResponse
     {
         if (! $request->session()->has('otp_user_id')) {
@@ -86,10 +84,9 @@ class OtpVerificationController extends Controller
             return redirect()->route('login');
         }
 
-        $throttleKey = 'otp_resend:'.$userId;
-        $nextAllowedAt = (int) Cache::get($throttleKey, 0);
-        if ($nextAllowedAt > now()->timestamp) {
-            $secondsRemaining = max(1, $nextAllowedAt - now()->timestamp);
+        $expiresAt = (int) $request->session()->get('otp_expires_at', now()->timestamp);
+        if ($expiresAt > now()->timestamp) {
+            $secondsRemaining = max(1, $expiresAt - now()->timestamp);
             throw ValidationException::withMessages([
                 'otp' => [__('Please wait :seconds seconds before requesting a new code.', ['seconds' => $secondsRemaining])],
             ]);
@@ -98,7 +95,6 @@ class OtpVerificationController extends Controller
         $user = User::findOrFail($userId);
         $otp = $this->generateOtp();
         Cache::put('otp:user:'.$userId, $otp, self::OTP_TTL_SECONDS);
-        Cache::put($throttleKey, now()->addSeconds(self::RESEND_THROTTLE_SECONDS)->timestamp, self::RESEND_THROTTLE_SECONDS);
         $request->session()->put('otp_expires_at', now()->addSeconds(self::OTP_TTL_SECONDS)->timestamp);
 
         $user->notify(new OtpVerificationNotification($otp));
