@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use App\Models\Venue;
 
 class EventFormRequest extends FormRequest
 {
@@ -27,17 +29,28 @@ class EventFormRequest extends FormRequest
 
             'start_at' => ['required', 'date'],
             'end_at' => ['required', 'date', 'after:start_at'],
+            'number_of_participants' => ['nullable', 'integer', 'min:0', function ($attribute, $value, $fail) {
+                // Check if venue capacity constraint is violated
+                if ($value && $this->venue_id) {
+                    $venue = Venue::find($this->venue_id);
+                    if ($venue && $value > $venue->capacity) {
+                        $fail("The {$attribute} cannot exceed the venue capacity of {$venue->capacity} persons.");
+                    }
+                }
+            }],
 
             /**
              * =====================================================
-             * LOGISTICS ITEMS (MANUAL ENTRY)
-             * logistics_items[0][resource_name]
+             * LOGISTICS ITEMS
+             * logistics_items[0][resource_id] - from dropdown or 'custom'
+             * logistics_items[0][resource_name] - manual entry
              * logistics_items[0][quantity]
              * logistics_items[0][unit_price]
              * =====================================================
              */
             'logistics_items' => ['nullable', 'array'],
-            'logistics_items.*.resource_name' => ['required_with:logistics_items.*.quantity', 'nullable', 'string', 'max:255'],
+            'logistics_items.*.resource_id' => ['nullable', 'string'],
+            'logistics_items.*.resource_name' => ['nullable', 'string', 'max:255'],
             'logistics_items.*.quantity' => ['nullable', 'integer', 'min:1'],
             'logistics_items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
 
@@ -128,7 +141,6 @@ class EventFormRequest extends FormRequest
              * LOGISTICS
              */
             'logistics_items.array' => 'Invalid logistics format.',
-            'logistics_items.*.resource_name.required_with' => 'Logistics item name is required.',
             'logistics_items.*.quantity.integer' => 'Logistics quantity must be a number.',
             'logistics_items.*.quantity.min' => 'Logistics quantity must be at least 1.',
             'logistics_items.*.unit_price.numeric' => 'Unit price must be a valid number.',

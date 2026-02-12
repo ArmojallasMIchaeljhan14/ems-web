@@ -22,10 +22,26 @@
             </p>
         </div>
 
-        <a href="{{ route('events.create') }}"
-           class="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition">
-            + Request New Event
-        </a>
+        <div class="flex gap-2">
+            @if($canManageVenues)
+                <a href="{{ route('admin.venues.index') }}"
+                   class="inline-flex items-center rounded-lg bg-gray-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 transition">
+                    🏢 Manage Venues
+                </a>
+            @endif
+
+            @if($canManageParticipants)
+                <a href="{{ route('admin.participants.index') }}"
+                   class="inline-flex items-center rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 transition">
+                    👥 Manage Participants
+                </a>
+            @endif
+
+            <a href="{{ route('events.create') }}"
+               class="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition">
+                + Request New Event
+            </a>
+        </div>
     </div>
 
     {{-- ================= EVENTS LIST ================= --}}
@@ -47,9 +63,6 @@
 
                 // ================= APPROVAL CONDITIONS =================
 
-                // Logistics gate must be approved
-                $logisticsApproved = $event->is_logistics_approved;
-
                 // Finance request must exist AND be approved
                 $financeApproved =
                     $event->financeRequest &&
@@ -67,13 +80,12 @@
                         ->count() === 0;
                 }
 
-                // Final requirement before event can be approved
-                $canApproveEvent = $logisticsApproved && $financeApproved && $custodianApproved;
+                // Final requirement before event can be approved (only Finance + Custodian)
+                $canApproveEvent = $financeApproved && $custodianApproved;
 
                 // Build a readable blocked message
                 $blockedReasons = [];
 
-                if (!$logisticsApproved) $blockedReasons[] = "Logistics gate is still pending.";
                 if (!$event->financeRequest) {
                     $blockedReasons[] = "Finance request is missing.";
                 } elseif (!$financeApproved) {
@@ -126,7 +138,13 @@
                     <div class="mt-4 flex flex-wrap gap-2">
 
                         <span class="badge">
-                            Committee: {{ $committeeCount }}
+                            Expected Participants: {{ $event->number_of_participants ?? 0 }}
+                        </span>
+
+                        <span class="badge">
+                            <a href="{{ route('events.participants.index', $event) }}" class="hover:underline">
+                                Registered: {{ $committeeCount }}
+                            </a>
                         </span>
 
                         <span class="badge">
@@ -159,12 +177,8 @@
                         @endif
                     </div>
 
-                    {{-- ================= GATE STATUS ================= --}}
+                    {{-- ================= APPROVAL STATUS ================= --}}
                     <div class="mt-3 flex flex-wrap gap-2 text-xs">
-
-                        <span class="badge {{ $logisticsApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700' }}">
-                            Logistics: {{ $logisticsApproved ? 'Approved' : 'Pending' }}
-                        </span>
 
                         <span class="badge {{ $financeApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700' }}">
                             Finance Request: {{ $financeApproved ? 'Approved' : 'Pending' }}
@@ -184,6 +198,13 @@
                        class="btn-secondary text-violet-600">
                         View Details
                     </a>
+
+                    @if($canManageParticipants)
+                        <a href="{{ route('events.participants.index', $event) }}"
+                           class="btn-secondary text-purple-600">
+                            👥 Participants ({{ $committeeCount }})
+                        </a>
+                    @endif
 
                     @role('admin')
 

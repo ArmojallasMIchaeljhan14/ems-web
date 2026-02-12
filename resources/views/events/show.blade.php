@@ -74,29 +74,124 @@
                     –
                     {{ $event->end_at->format('g:i A') }}
                 </p>
+
+                <p class="text-sm text-gray-600 mt-3">
+                    <span class="font-semibold">Expected Participants:</span>
+                    {{ $event->number_of_participants ?? 0 }}
+                </p>
+
+                <p class="text-sm text-gray-600 mt-2">
+                    <span class="font-semibold">Registered Participants:</span>
+                    <span class="inline-flex items-center gap-2 ml-1">
+                        <span class="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                            Total: {{ $participantCount }}
+                        </span>
+                        @if($attendedCount > 0)
+                            <span class="inline-block rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                Attended: {{ $attendedCount }}
+                            </span>
+                        @endif
+                        @if($absentCount > 0)
+                            <span class="inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                Absent: {{ $absentCount }}
+                            </span>
+                        @endif
+                    </span>
+                </p>
             </div>
+        </div>
+    </div>
+
+    {{-- ================= PARTICIPANTS SECTION ================= --}}
+    <div class="bg-white shadow rounded-lg border mb-6">
+        <div class="px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Participants</h3>
+            @if(auth()->user()->isAdmin() || auth()->user()->hasPermissionTo('manage participants'))
+                <a href="{{ route('events.participants.create', $event) }}" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Add Participant
+                </a>
+            @endif
+        </div>
+        <div class="p-6">
+            @if($participantCount > 0)
+                <div class="flow-root">
+                    <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                            <table class="min-w-full divide-y divide-gray-300">
+                                <thead>
+                                    <tr>
+                                        <th class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
+                                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
+                                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Role</th>
+                                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    @foreach($event->participants as $participant)
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{{ $participant->name }}</td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-600">{{ $participant->email }}</td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-600">{{ $participant->role ?? '-' }}</td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                                @php
+                                                    $statusColors = [
+                                                        'pending' => 'bg-yellow-100 text-yellow-800',
+                                                        'confirmed' => 'bg-blue-100 text-blue-800',
+                                                        'attended' => 'bg-green-100 text-green-800',
+                                                        'absent' => 'bg-red-100 text-red-800',
+                                                    ];
+                                                @endphp
+                                                <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {{ $statusColors[$participant->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                                    {{ ucfirst($participant->status) }}
+                                                </span>
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                                <a href="{{ route('events.participants.show', [$event, $participant]) }}" class="text-blue-600 hover:text-blue-900">View</a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-right">
+                    <a href="{{ route('events.participants.index', $event) }}" class="text-sm font-medium text-blue-600 hover:text-blue-900">
+                        View All Participants →
+                    </a>
+                </div>
+            @else
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20a9 9 0 0118 0v-2a9 9 0 00-18 0v2z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No participants yet</h3>
+                    <p class="mt-1 text-sm text-gray-500">Add participants to track attendance for this event.</p>
+                </div>
+            @endif
         </div>
     </div>
 
 
     {{-- ================= APPROVAL CONDITIONS (SAME AS INDEX) ================= --}}
     @php
-        // 1) Gates
-        $allGatesApproved =
-            $event->is_venue_approved &&
-            $event->is_logistics_approved &&
-            $event->is_finance_approved;
+        // ================= COUNTS =================
+        $custodianCount = $event->custodianRequests->count();
 
-        // 2) Finance request must exist and be approved
+        // ================= APPROVAL CONDITIONS =================
+
+        // Finance request must exist AND be approved
         $financeApproved =
             $event->financeRequest &&
             $event->financeRequest->status === 'approved';
 
-        // 3) Custodian:
+        // Custodian:
         // - If none exists => treat as approved
         // - If exists => all must be approved
-        $custodianCount = $event->custodianRequests->count();
-
         $custodianApproved = true;
         if ($custodianCount > 0) {
             $custodianApproved = $event->custodianRequests
@@ -104,15 +199,11 @@
                 ->count() === 0;
         }
 
-        // Final requirement
-        $canApproveEvent = $allGatesApproved && $financeApproved && $custodianApproved;
+        // Final requirement (only Finance + Custodian)
+        $canApproveEvent = $financeApproved && $custodianApproved;
 
         // Blocked reasons
         $blockedReasons = [];
-
-        if (!$event->is_venue_approved) $blockedReasons[] = "Venue gate is still pending.";
-        if (!$event->is_logistics_approved) $blockedReasons[] = "Logistics gate is still pending.";
-        if (!$event->is_finance_approved) $blockedReasons[] = "Finance gate is still pending.";
 
         if (!$event->financeRequest) {
             $blockedReasons[] = "Finance request is missing.";
@@ -128,32 +219,11 @@
     @endphp
 
 
-    {{-- ================= GATE + REQUEST STATUS ================= --}}
+    {{-- ================= APPROVAL STATUS ================= --}}
     <div class="bg-white border rounded-lg p-5 shadow mb-6">
         <h4 class="font-bold mb-4">Approval Status</h4>
 
-        <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-
-            <div class="p-3 rounded border {{ $event->is_venue_approved ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200' }}">
-                <p class="font-bold">Venue Gate</p>
-                <p class="mt-1">
-                    {{ $event->is_venue_approved ? 'Approved' : 'Pending' }}
-                </p>
-            </div>
-
-            <div class="p-3 rounded border {{ $event->is_logistics_approved ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200' }}">
-                <p class="font-bold">Logistics Gate</p>
-                <p class="mt-1">
-                    {{ $event->is_logistics_approved ? 'Approved' : 'Pending' }}
-                </p>
-            </div>
-
-            <div class="p-3 rounded border {{ $event->is_finance_approved ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200' }}">
-                <p class="font-bold">Finance Gate</p>
-                <p class="mt-1">
-                    {{ $event->is_finance_approved ? 'Approved' : 'Pending' }}
-                </p>
-            </div>
+        <div class="grid sm:grid-cols-2 md:grid-cols-2 gap-3 text-xs">
 
             <div class="p-3 rounded border {{ $financeApproved ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200' }}">
                 <p class="font-bold">Finance Request</p>

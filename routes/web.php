@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\ParticipantController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RolePermissionController;
-use App\Http\Controllers\Admin\VenueController;
+use App\Http\Controllers\VenueController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -44,6 +44,10 @@ Route::middleware('auth')->group(function () {
     // Events (normal users)
     Route::resource('events', EventController::class);
 
+    // Nested participants under events
+    Route::resource('events.participants', ParticipantController::class);
+    Route::get('/events/{event}/participants/export', [ParticipantController::class, 'export'])->name('events.participants.export');
+
     // Event actions (still accessible depending on policy/roles)
     Route::post('/events/{event}/approve', [EventController::class, 'approve'])->name('events.approve');
     Route::post('/events/{event}/reject', [EventController::class, 'reject'])->name('events.reject');
@@ -60,6 +64,9 @@ Route::middleware('auth')->group(function () {
 
     // Support
     Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+
+    // Venue availability endpoint for AJAX checks (used by event create form)
+    Route::get('/venues/{venue}/availability', [VenueController::class, 'availability'])->name('venues.availability');
 });
 
 
@@ -90,8 +97,9 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
 
         // Admin Modules
-        Route::resource('venues', VenueController::class)->only(['index']);
-        Route::resource('participants', ParticipantController::class)->only(['index']);
+        Route::resource('venues', VenueController::class);
+        Route::resource('events.participants', ParticipantController::class);
+        Route::get('/events/{event}/participants/export', [ParticipantController::class, 'export'])->name('events.participants.export');
         Route::resource('reports', ReportController::class)->only(['index']);
         Route::resource('documents', DocumentController::class)->only(['index']);
 

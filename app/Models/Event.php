@@ -23,10 +23,8 @@ class Event extends Model
         'end_at',
         'status',
         'requested_by',
-        'venue_id',              // ADDED: Critical for saving venue
-        'is_venue_approved',     // ADDED: For approval gate
-        'is_logistics_approved', // ADDED: For approval gate
-        'is_finance_approved',   // ADDED: For approval gate
+        'venue_id',
+        'number_of_participants',
     ];
 
     protected function casts(): array
@@ -34,9 +32,6 @@ class Event extends Model
         return [
             'start_at' => 'datetime',
             'end_at' => 'datetime',
-            'is_venue_approved' => 'boolean',
-            'is_logistics_approved' => 'boolean',
-            'is_finance_approved' => 'boolean',
         ];
     }
 
@@ -153,10 +148,8 @@ public function isCustodianApproved(): bool
 
 public function canBeFullyApproved(): bool
 {
-    return $this->is_venue_approved
-        && $this->is_logistics_approved
-        && $this->is_finance_approved
-        && $this->isFinanceRequestApproved()
+    // Only check finance request and custodian request
+    return $this->isFinanceRequestApproved()
         && $this->isCustodianApproved();
 }
 

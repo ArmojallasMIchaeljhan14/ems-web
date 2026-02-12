@@ -63,42 +63,12 @@ class EventController extends Controller
     }
 
     $events = $query->get();
+    
+    // Pass permission flag to view
+    $canManageVenues = $user->isAdmin() || $user->hasPermissionTo('manage venues');
+    $canManageParticipants = $user->isAdmin() || $user->hasPermissionTo('manage participants');
 
-    return view('events.index', compact('events'));
-}
-
-
-    /* =========================================================
-     CREATE
-    ========================================================== */
-    public function create(): View
-    {
-        $venues = Venue::orderBy('name')->get();
-        $resources = Resource::orderBy('name')->get();
-        $employees = Employee::orderBy('last_name')->get();
-        $custodianMaterials = CustodianMaterial::orderBy('name')->get();
-
-        return view('events.create', compact(
-            'venues',
-            'resources',
-            'employees',
-            'custodianMaterials'
-        ));
-    }
-
-        /**
-         * Comprehensive Store with Availability Check and Multi-Gate Approval.
-         */
-    public function store(EventFormRequest $request): RedirectResponse
-    {
-        // 1. Check Venue Availability
-        $isTaken = Event::where('venue_id', $request->venue_id)
-            ->whereNotIn('status', ['rejected', 'cancelled', 'deleted'])
-            ->where(function ($query) use ($request) {
-                $query->whereBetween('start_at', [$request->start_at, $request->end_at])
-                    ->orWhereBetween('end_at', [$request->start_at, $request->end_at]);
-            })->exists();
-
+    return view('events.index', compact('events', 'canManageVenues', 'canManageParticipants'));
         if ($isTaken) {
             return back()->withInput()->withErrors([
                 'venue_id' => 'The venue is already booked for these dates.'
@@ -115,11 +85,9 @@ class EventController extends Controller
                     'start_at' => $request->start_at,
                     'end_at' => $request->end_at,
                     'venue_id' => $request->venue_id,
+                    'number_of_participants' => $request->number_of_participants,
                     'requested_by' => Auth::id(),
                     'status' => 'pending_approvals',
-                    'is_venue_approved' => false,
-                    'is_logistics_approved' => false,
-                    'is_finance_approved' => false,
                 ]);
 
                 $logisticsTotal = 0;
@@ -129,20 +97,27 @@ class EventController extends Controller
                 if ($request->has('logistics_items')) {
                     foreach ($request->logistics_items as $item) {
 
+                        $resourceId = $item['resource_id'] ?? null;
                         $name = $item['resource_name'] ?? null;
                         $quantity = $item['quantity'] ?? 0;
                         $unitPrice = $item['unit_price'] ?? 0;
 
-                        if (!empty($name) && $quantity > 0) {
+                        // Convert 'custom' string to null
+                        if ($resourceId === 'custom') {
+                            $resourceId = null;
+                        }
+
+                        if ((!empty($resourceId) || !empty($name)) && $quantity > 0) {
 
                             $subtotal = $quantity * $unitPrice;
                             $logisticsTotal += $subtotal;
 
                             $event->logisticsItems()->create([
-                                'description' => $name,
-                                'quantity'    => $quantity,
-                                'unit_price'  => $unitPrice,
-                                'subtotal'    => $subtotal,
+                                'resource_id'  => $resourceId,
+                                'description'  => $name,
+                                'quantity'     => $quantity,
+                                'unit_price'   => $unitPrice,
+                                'subtotal'     => $subtotal,
                             ]);
                         }
                     }
@@ -209,7 +184,7 @@ class EventController extends Controller
                 $event->histories()->create([
                     'user_id' => Auth::id(),
                     'action'  => 'Request Submitted',
-                    'note'    => 'Event requested. Awaiting Venue, Logistics, and Finance approvals.'
+                    'note'    => 'Event requested. Awaiting Finance and Custodian approvals.'
                 ]);
 
                 return $event;
@@ -226,70 +201,7 @@ class EventController extends Controller
     }
 
 
-        /**
-         * Unified Approval for Departments (Venue, Logistics, Finance).
-         */
-        public function approveGate(Request $request, Event $event, string $gate): RedirectResponse
-{
-    $this->authorize('approveGate', [$event, $gate]);
 
-    $validGates = ['venue', 'logistics', 'finance'];
-
-    if (!in_array($gate, $validGates)) {
-        abort(404);
-    }
-
-    $column = "is_{$gate}_approved";
-
-    DB::transaction(function () use ($event, $gate, $column) {
-
-        // ================= UPDATE GATE =================
-        $event->update([$column => true]);
-
-        $event->histories()->create([
-            'user_id' => Auth::id(),
-            'action'  => ucfirst($gate) . ' Approved',
-            'note'    => "The {$gate} department has cleared their portion of the request."
-        ]);
-
-        $event->refresh();
-
-        // ================= CHECK GATES =================
-        $allGatesApproved =
-            $event->is_venue_approved &&
-            $event->is_logistics_approved &&
-            $event->is_finance_approved;
-
-        // ================= CHECK FINANCE REQUEST =================
-        $financeApproved =
-            $event->financeRequest &&
-            $event->financeRequest->status === 'approved';
-
-        // ================= CHECK CUSTODIAN REQUESTS =================
-        $custodianApproved = true;
-
-        // If custodian requests exist, all must be approved
-        if ($event->custodianRequests()->count() > 0) {
-            $custodianApproved = !$event->custodianRequests()
-                ->where('status', '!=', 'approved')
-                ->exists();
-        }
-
-        // ================= FINAL AUTO APPROVAL =================
-        if ($allGatesApproved && $financeApproved && $custodianApproved) {
-
-            $event->update(['status' => 'approved']);
-
-            $event->histories()->create([
-                'user_id' => Auth::id(),
-                'action'  => 'Full Approval',
-                'note'    => 'All gates cleared and all connected requests (Finance + Custodian) are approved.'
-            ]);
-        }
-    });
-
-    return back()->with('success', ucfirst($gate) . ' approval recorded.');
-}
 
 
         public function show(Event $event): View
@@ -307,7 +219,12 @@ class EventController extends Controller
                     'financeRequest'
                 ]);
 
-                return view('events.show', compact('event'));
+                // Participant stats
+                $participantCount = $event->participants()->count();
+                $attendedCount = $event->participants()->where('status', 'attended')->count();
+                $absentCount = $event->participants()->where('status', 'absent')->count();
+
+                return view('events.show', compact('event', 'participantCount', 'attendedCount', 'absentCount'));
             }
 
 
@@ -346,6 +263,7 @@ class EventController extends Controller
                 'start_at' => $request->start_at,
                 'end_at' => $request->end_at,
                 'venue_id' => $request->venue_id,
+                'number_of_participants' => $request->number_of_participants,
             ]);
 
             /* ================= CLEAR OLD RELATED DATA ================= */
@@ -362,20 +280,27 @@ class EventController extends Controller
             if ($request->has('logistics_items')) {
                 foreach ($request->logistics_items as $item) {
 
+                    $resourceId = $item['resource_id'] ?? null;
                     $name = $item['resource_name'] ?? null;
                     $quantity = $item['quantity'] ?? 0;
                     $unitPrice = $item['unit_price'] ?? 0;
 
-                    if (!empty($name) && $quantity > 0) {
+                    // Convert 'custom' string to null
+                    if ($resourceId === 'custom') {
+                        $resourceId = null;
+                    }
+
+                    if ((!empty($resourceId) || !empty($name)) && $quantity > 0) {
 
                         $subtotal = $quantity * $unitPrice;
                         $logisticsTotal += $subtotal;
 
                         $event->logisticsItems()->create([
-                            'description' => $name,
-                            'quantity'    => $quantity,
-                            'unit_price'  => $unitPrice,
-                            'subtotal'    => $subtotal,
+                            'resource_id'  => $resourceId,
+                            'description'  => $name,
+                            'quantity'     => $quantity,
+                            'unit_price'   => $unitPrice,
+                            'subtotal'     => $subtotal,
                         ]);
                     }
                 }
@@ -470,10 +395,6 @@ class EventController extends Controller
 
         $missing = [];
 
-        if (!$event->is_venue_approved) $missing[] = "Venue Approval";
-        if (!$event->is_logistics_approved) $missing[] = "Logistics Approval";
-        if (!$event->is_finance_approved) $missing[] = "Finance Gate Approval";
-
         if (!$event->isFinanceRequestApproved()) {
             $missing[] = "Finance Request Approval";
         }
@@ -518,7 +439,7 @@ public function publish(Event $event): RedirectResponse
     $this->authorize('publish', $event);
 
     if (
-        !$event->isFinanceApproved() ||
+        !$event->isFinanceRequestApproved() ||
         !$event->isCustodianApproved()
     ) {
         return back()->withErrors(

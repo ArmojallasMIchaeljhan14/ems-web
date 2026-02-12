@@ -9,6 +9,7 @@ class EventLogisticsItem extends Model
 {
     protected $fillable = [
         'event_id',
+        'resource_id',
         'description',
         'quantity',
         'unit_price',
@@ -23,6 +24,11 @@ class EventLogisticsItem extends Model
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function resource()
+    {
+        return $this->belongsTo(Resource::class);
     }
 }
 

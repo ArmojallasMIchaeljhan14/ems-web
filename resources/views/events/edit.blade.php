@@ -12,7 +12,7 @@
     </div>
 </x-slot>
 
-<div class="py-10" x-data="eventForm">
+<div class="py-10" x-data="eventForm({ venues: {{ json_encode($venues->map(fn($v) => ['id' => $v->id, 'name' => $v->name, 'capacity' => $v->capacity])->values()) }} })">
 <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
 
 <form method="POST" action="{{ route('events.update', $event) }}"
@@ -33,31 +33,60 @@ Event Details
 <input type="text"
        name="title"
        value="{{ old('title', $event->title) }}"
-       class="w-full rounded-lg border-gray-300 md:col-span-2">
+       class="w-full rounded-lg border-gray-300 md:col-span-2"
+       required>
 
-<select name="venue_id"
-        class="w-full rounded-lg border-gray-300">
-    @foreach($venues as $venue)
-        <option value="{{ $venue->id }}"
-            {{ old('venue_id', $event->venue_id) == $venue->id ? 'selected' : '' }}>
-            {{ $venue->name }}
-        </option>
-    @endforeach
-</select>
+<div>
+   <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+   <select name="venue_id"
+           @change="updateVenueCapacity()"
+           x-model="selected_venue_id"
+           class="w-full rounded-lg border-gray-300"
+           required>
+       @foreach($venues as $venue)
+           <option value="{{ $venue->id }}"
+               {{ old('venue_id', $event->venue_id) == $venue->id ? 'selected' : '' }}>
+               {{ $venue->name }}
+           </option>
+       @endforeach
+   </select>
+   <p x-show="venue_capacity > 0" class="mt-2 text-xs text-gray-600">
+       📍 Venue Capacity: <span class="font-bold text-indigo-600" x-text="venue_capacity"></span> persons
+   </p>
+</div>
 
 <input type="datetime-local"
        name="start_at"
        value="{{ old('start_at', $event->start_at->format('Y-m-d\TH:i')) }}"
-       class="w-full rounded-lg border-gray-300">
+       class="w-full rounded-lg border-gray-300"
+       required>
 
 <input type="datetime-local"
        name="end_at"
        value="{{ old('end_at', $event->end_at->format('Y-m-d\TH:i')) }}"
-       class="w-full rounded-lg border-gray-300">
+       class="w-full rounded-lg border-gray-300"
+       required>
 
 <textarea name="description"
           rows="4"
-          class="w-full rounded-lg border-gray-300 md:col-span-2">{{ old('description', $event->description) }}</textarea>
+          class="w-full rounded-lg border-gray-300 md:col-span-2"
+          required>{{ old('description', $event->description) }}</textarea>
+
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">
+        Number of Participants
+        <span x-show="venue_capacity > 0" class="text-xs text-gray-500">(Max: <span x-text="venue_capacity"></span>)</span>
+    </label>
+    <input type="number"
+           name="number_of_participants"
+           value="{{ old('number_of_participants', $event->number_of_participants) }}"
+           x-model.number="number_of_participants"
+           @input="validateParticipants()"
+           min="0"
+           class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+           placeholder="Expected number of participants">
+    <p x-show="participants_error" class="mt-2 text-sm text-red-600" x-text="participants_error"></p>
+</div>
 
 </div>
 </div>
@@ -72,6 +101,22 @@ Logistics & Budget
 <div class="grid grid-cols-12 gap-4 p-4 bg-gray-50 rounded-xl border items-end mb-3">
 
 <div class="col-span-5">
+<label class="block text-xs font-bold text-gray-600 mb-1">Resource</label>
+<select
+       :name="`logistics_items[${index}][resource_id]`"
+       x-model="row.resource_id"
+       @change="updateResourceName(index)"
+       class="w-full rounded-lg border-gray-300">
+    <option value="">-- Select Resource --</option>
+    @foreach($resources as $resource)
+        <option value="{{ $resource->id }}">{{ $resource->name }}</option>
+    @endforeach
+    <option value="custom">-- Not on list (Manual Entry) --</option>
+</select>
+</div>
+
+<div class="col-span-5" x-show="row.resource_id === 'custom'">
+<label class="block text-xs font-bold text-gray-600 mb-1">Item Name</label>
 <input type="text"
        :name="`logistics_items[${index}][resource_name]`"
        x-model="row.resource_name"
@@ -79,6 +124,7 @@ Logistics & Budget
 </div>
 
 <div class="col-span-2">
+<label class="block text-xs font-bold text-gray-600 mb-1">Quantity</label>
 <input type="number"
        min="1"
        :name="`logistics_items[${index}][quantity]`"
@@ -87,6 +133,7 @@ Logistics & Budget
 </div>
 
 <div class="col-span-2">
+<label class="block text-xs font-bold text-gray-600 mb-1">Unit Price (₱)</label>
 <input type="number"
        step="0.01"
        :name="`logistics_items[${index}][unit_price]`"
@@ -212,13 +259,38 @@ Update Request
 <script>
 document.addEventListener('alpine:init', () => {
 
-Alpine.data('eventForm', () => ({
-formatNumber(val) {
-return new Intl.NumberFormat('en-PH',{
-minimumFractionDigits:2,
-maximumFractionDigits:2
-}).format(val || 0);
-}
+Alpine.data('eventForm', (venuesData) => ({
+    venues: venuesData || [],
+    selected_venue_id: '{{ $event->venue_id }}',
+    venue_capacity: {{ $event->venue->capacity }},
+    number_of_participants: {{ $event->number_of_participants }},
+    participants_error: '',
+
+    formatNumber(val) {
+        return new Intl.NumberFormat('en-PH',{
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+        }).format(val || 0);
+    },
+
+    updateVenueCapacity() {
+        const venue = this.venues.find(v => v.id == this.selected_venue_id);
+        this.venue_capacity = venue ? venue.capacity : 0;
+        this.validateParticipants();
+    },
+
+    validateParticipants() {
+        this.participants_error = '';
+        if (this.venue_capacity > 0 && this.number_of_participants > this.venue_capacity) {
+            this.participants_error = `Number of participants cannot exceed venue capacity of ${this.venue_capacity}.`;
+        }
+    },
+
+    init() {
+        if (this.selected_venue_id) {
+            this.updateVenueCapacity();
+        }
+    }
 }));
 
 /* ================= LOGISTICS FIX ================= */
@@ -226,6 +298,7 @@ Alpine.data('logisticsRepeater', () => ({
 rows: {!! json_encode(
 old('logistics_items',
 $event->logisticsItems->map(fn($l)=>[
+'resource_id'=>$l->resource_id,
 'resource_name'=>$l->description,
 'quantity'=>$l->quantity,
 'unit_price'=>$l->unit_price
@@ -233,8 +306,15 @@ $event->logisticsItems->map(fn($l)=>[
 )
 ) !!},
 
-addRow(){ this.rows.push({resource_name:'',quantity:1,unit_price:0}) },
+addRow(){ this.rows.push({resource_id:'',resource_name:'',quantity:1,unit_price:0}) },
 removeRow(i){ if(this.rows.length>1) this.rows.splice(i,1) },
+
+updateResourceName(index) {
+    if (this.rows[index].resource_id && this.rows[index].resource_id !== 'custom') {
+        this.rows[index].resource_name = '';
+    }
+},
+
 calculateTotal(){
 return this.rows.reduce((sum,row)=>{
 return sum+(parseFloat(row.quantity||0)*parseFloat(row.unit_price||0))

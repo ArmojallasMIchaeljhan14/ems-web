@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Venue extends Model
 {
@@ -15,10 +14,13 @@ class Venue extends Model
         'facilities',
     ];
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
+    }
+
     public function venueBookings(): HasMany
     {
         return $this->hasMany(VenueBooking::class);
     }
-
-
 }

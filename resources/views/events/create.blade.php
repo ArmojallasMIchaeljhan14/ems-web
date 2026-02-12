@@ -12,7 +12,7 @@
         </div>
     </x-slot>
 
-    <div class="py-10" x-data="eventForm">
+<div class="py-10" x-data="eventForm({ venues: {{ json_encode($venues->map(fn($v) => ['id' => $v->id, 'name' => $v->name, 'capacity' => $v->capacity, 'facilities' => $v->facilities])->values()) }} })">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
 
             {{-- Validation Errors --}}
@@ -47,7 +47,10 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-                                <select name="venue_id" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500" required>
+                                <select name="venue_id" 
+                                    @change="updateVenueCapacity(); checkVenueAvailability()"
+                                    x-model="selected_venue_id"
+                                        class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500" required>
                                     <option value="">-- Select Venue --</option>
                                     @foreach($venues as $venue)
                                         <option value="{{ $venue->id }}" {{ old('venue_id') == $venue->id ? 'selected' : '' }}>
@@ -55,20 +58,41 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <p x-show="venue_capacity > 0" class="mt-2 text-xs text-gray-600">
+                                    📍 Venue Capacity: <span class="font-bold text-indigo-600" x-text="venue_capacity"></span> persons
+                                </p>
+                                <div x-show="selected_venue_id" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-2">Venue Details</h4>
+                                    <div class="text-xs text-gray-700 space-y-2" x-show="selectedVenue">
+                                        <div>
+                                            <span class="font-semibold text-gray-600">Capacity:</span>
+                                            <span x-text="selectedVenue ? selectedVenue.capacity + ' persons' : ''"></span>
+                                        </div>
+                                        <div>
+                                            <span class="font-semibold text-gray-600">Amenities:</span>
+                                            <span x-text="selectedVenue ? (selectedVenue.facilities || 'No facilities listed') : ''"></span>
+                                        </div>
+                                    </div>
+                                    <p x-show="!selectedVenue" class="text-xs text-gray-400">Venue details loading...</p>
+                                </div>
+                                <p x-show="availability_checking" class="mt-2 text-xs text-gray-500">Checking availability…</p>
+                                <p x-show="!availability_checking && selected_venue_id && start_at && end_at && !venue_available" class="mt-2 text-sm text-red-600">
+                                    ⚠️ This venue is unavailable for the selected dates.
+                                </p>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Start Date & Time</label>
-                                <input type="datetime-local" name="start_at" value="{{ old('start_at') }}"
-                                       class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                       required>
+                                    <input type="datetime-local" name="start_at" x-model="start_at" @change="checkVenueAvailability()" value="{{ old('start_at') }}"
+                                        class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                        required>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">End Date & Time</label>
-                                <input type="datetime-local" name="end_at" value="{{ old('end_at') }}"
-                                       class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                       required>
+                                    <input type="datetime-local" name="end_at" x-model="end_at" @change="checkVenueAvailability()" value="{{ old('end_at') }}"
+                                        class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                        required>
                             </div>
 
                             <div class="md:col-span-2">
@@ -76,6 +100,22 @@
                                 <textarea name="description" rows="4"
                                           class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                           placeholder="Event details...">{{ old('description') }}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Number of Participants
+                                    <span x-show="venue_capacity > 0" class="text-xs text-gray-500">(Max: <span x-text="venue_capacity"></span>)</span>
+                                </label>
+                                <input type="number" 
+                                       name="number_of_participants" 
+                                       value="{{ old('number_of_participants', 0) }}"
+                                       x-model.number="number_of_participants"
+                                       @input="validateParticipants()"
+                                       min="0"
+                                       class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                       placeholder="Expected number of participants">
+                                <p x-show="participants_error" class="mt-2 text-sm text-red-600" x-text="participants_error"></p>
                             </div>
                         </div>
                     </div>
@@ -98,12 +138,26 @@
                                 <div class="grid grid-cols-12 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 items-end">
                                     
                                     <div class="col-span-12 md:col-span-5">
-                                        <label class="block text-xs font-bold text-gray-600 mb-1">Resource Name</label>
+                                        <label class="block text-xs font-bold text-gray-600 mb-1">Resource</label>
+                                        <select 
+                                               :name="`logistics_items[${index}][resource_id]`" 
+                                               x-model="row.resource_id"
+                                               @change="updateResourceName(index)"
+                                               class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                                            <option value="">-- Select Resource --</option>
+                                            @foreach($resources as $resource)
+                                                <option value="{{ $resource->id }}">{{ $resource->name }}</option>
+                                            @endforeach
+                                            <option value="custom">-- Not on list (Manual Entry) --</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-span-12 md:col-span-5" x-show="row.resource_id === 'custom'">
+                                        <label class="block text-xs font-bold text-gray-600 mb-1">Item Name</label>
                                         <input type="text" 
                                                :name="`logistics_items[${index}][resource_name]`" 
                                                x-model="row.resource_name"
                                                placeholder="e.g., Sound System"
-                                               required
                                                class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
 
@@ -235,6 +289,8 @@
                     </a>
 
                     <button type="submit"
+                            :disabled="selected_venue_id && !venue_available"
+                            x-bind:class="(selected_venue_id && !venue_available) ? 'opacity-60 cursor-not-allowed' : ''"
                             class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 transition">
                         Submit Request
                     </button>
@@ -248,26 +304,122 @@
         document.addEventListener('alpine:init', () => {
             
             // Shared format helper
-            Alpine.data('eventForm', () => ({
+            Alpine.data('eventForm', (venuesData) => ({
+                venues: (venuesData && venuesData.venues) ? venuesData.venues : [],
+                selected_venue_id: '{{ old('venue_id') }}',
+                selectedVenue: null,
+                venue_capacity: 0,
+                number_of_participants: {{ old('number_of_participants', 0) }},
+                participants_error: '',
+
+                // availability
+                start_at: '{{ old('start_at') }}',
+                end_at: '{{ old('end_at') }}',
+                venue_available: true,
+                availability_checking: false,
+                availability_conflicts: [],
+                availabilityUrlTemplate: '{{ url('/venues/__ID__/availability') }}',
+
                 formatNumber(val) {
                     return new Intl.NumberFormat('en-PH', { 
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2 
                     }).format(val || 0);
+                },
+
+                updateVenueCapacity() {
+                    // Clear if no venue selected
+                    if (!this.selected_venue_id) {
+                        this.selectedVenue = null;
+                        this.venue_capacity = 0;
+                        return;
+                    }
+                    
+                    // Find venue - compare as strings to handle type coercion
+                    const selectedIdStr = String(this.selected_venue_id);
+                    const venue = this.venues.find(v => String(v.id) === selectedIdStr);
+                    
+                    this.selectedVenue = venue || null;
+                    this.venue_capacity = (venue && venue.capacity) ? venue.capacity : 0;
+                    this.validateParticipants();
+                },
+
+                validateParticipants() {
+                    this.participants_error = '';
+                    if (this.venue_capacity > 0 && this.number_of_participants > this.venue_capacity) {
+                        this.participants_error = `Number of participants cannot exceed venue capacity of ${this.venue_capacity}.`;
+                    }
+                },
+
+                async checkVenueAvailability() {
+                    this.availability_conflicts = [];
+                    if (!this.selected_venue_id || !this.start_at || !this.end_at) {
+                        this.venue_available = true;
+                        return;
+                    }
+
+                    this.availability_checking = true;
+                    try {
+                        const url = this.availabilityUrlTemplate.replace('__ID__', this.selected_venue_id)
+                            + '?start_at=' + encodeURIComponent(this.start_at)
+                            + '&end_at=' + encodeURIComponent(this.end_at);
+
+                        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                        if (!res.ok) {
+                            this.venue_available = true;
+                            this.availability_conflicts = [];
+                            this.availability_checking = false;
+                            return;
+                        }
+
+                        const data = await res.json();
+                        this.venue_available = data.available;
+                        this.availability_conflicts = data.conflicts || [];
+                    } catch (e) {
+                        this.venue_available = true;
+                        this.availability_conflicts = [];
+                    } finally {
+                        this.availability_checking = false;
+                    }
+                },
+
+                init() {
+                    // Reactive watcher for venue selection changes
+                    this.$watch('selected_venue_id', () => {
+                        this.updateVenueCapacity();
+                        this.checkVenueAvailability();
+                    });
+
+                    // Set capacity on load if venue is already selected
+                    if (this.selected_venue_id) {
+                        this.updateVenueCapacity();
+                    }
+
+                    // initial availability check if dates are present
+                    if (this.selected_venue_id && this.start_at && this.end_at) {
+                        this.checkVenueAvailability();
+                    }
                 }
             }));
 
             // Logistics & Budget Logic
             Alpine.data('logisticsRepeater', () => ({
                 // Initial rows from old input or default empty row
-                rows: {!! json_encode(old('logistics_items', [['resource_name' => '', 'quantity' => 1, 'unit_price' => 0]])) !!},
+                rows: {!! json_encode(old('logistics_items', [['resource_id' => '', 'resource_name' => '', 'quantity' => 1, 'unit_price' => 0]])) !!},
                 
                 addRow() { 
-                    this.rows.push({ resource_name: '', quantity: 1, unit_price: 0 }) 
+                    this.rows.push({ resource_id: '', resource_name: '', quantity: 1, unit_price: 0 }) 
                 },
                 
                 removeRow(i) { 
                     if(this.rows.length > 1) this.rows.splice(i, 1);
+                },
+
+                updateResourceName(index) {
+                    // When a resource is selected, clear the manual name field
+                    if (this.rows[index].resource_id && this.rows[index].resource_id !== 'custom') {
+                        this.rows[index].resource_name = '';
+                    }
                 },
 
                 calculateTotal() {
