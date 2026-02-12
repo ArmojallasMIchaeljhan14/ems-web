@@ -42,6 +42,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->put('otp_user_id', encrypt($userId));
         $request->session()->put('otp_remember', $request->boolean('remember'));
+        $request->session()->put('otp_expires_at', now()->addSeconds(self::OTP_TTL_SECONDS)->timestamp);
 
         $otp = $this->generateOtp();
         Cache::put('otp:user:'.$userId, $otp, self::OTP_TTL_SECONDS);
