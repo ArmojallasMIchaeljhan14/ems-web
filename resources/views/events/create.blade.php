@@ -169,16 +169,6 @@
                                                class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
 
-                                    <div class="col-span-12 md:col-span-5">
-                                        <label class="block text-xs font-bold text-gray-600 mb-1">Assign to Employee (optional)</label>
-                                        <select :name="`logistics_items[${index}][employee_id]`" x-model="row.employee_id" class="w-full rounded-lg border-gray-300 logistics-employee">
-                                            <option value="">-- Select employee (optional) --</option>
-                                            @foreach($employees as $emp)
-                                                <option value="{{ $emp->id }}">{{ $emp->full_name }}{{ $emp->email ? ' (' . $emp->email . ')' : '' }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-
                                     <div class="col-span-4 md:col-span-2">
                                         <label class="block text-xs font-bold text-gray-600 mb-1">Quantity</label>
                                         <input type="number" 
@@ -502,19 +492,6 @@
                 });
 
                 sel.dataset.tsInit = '1';
-            });
-
-            // Initialize employee selectors for logistics rows
-            document.querySelectorAll('select.logistics-employee').forEach(function(sel) {
-                if (sel.dataset.tsInitEmp) return;
-
-                new TomSelect(sel, {
-                    create: false,
-                    sortField: [{ field: 'text', direction: 'asc' }],
-                    plugins: ['clear_button']
-                });
-
-                sel.dataset.tsInitEmp = '1';
             });
         };
 

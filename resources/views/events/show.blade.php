@@ -79,7 +79,10 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Assignment</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Position</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Department</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Role</th>
                         <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Action</th>
                     </tr>
                 </thead>
@@ -89,6 +92,15 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-bold text-gray-900">{{ $member->employee->full_name ?? $member->name }}</div>
                                 <div class="text-xs text-gray-500">{{ $member->employee->email ?? $member->email }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $member->employee->position_title ?? '—' }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $member->employee->department ?? '—' }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $member->employee->mobile_number ?? $member->employee->phone_number ?? '—' }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold">
@@ -101,7 +113,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-400 italic">No committee members assigned.</td>
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-400 italic">No committee members assigned.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -183,9 +195,6 @@
                         <div class="flex justify-between items-start">
                             <div class="min-w-0">
                                 <div class="text-sm font-medium text-gray-900">{{ $item->quantity }}× {{ $item->description }}</div>
-                                @if($item->assigned_name)
-                                    <div class="text-xs text-gray-500 mt-1">Assigned to: {{ $item->assigned_name }}@if($item->assigned_email) &middot; <span class="lowercase">{{ $item->assigned_email }}</span>@endif</div>
-                                @endif
                             </div>
                             <div class="text-right">
                                 <div class="font-semibold text-gray-900">₱{{ number_format($item->subtotal, 2) }}</div>
