@@ -177,11 +177,20 @@
         {{-- LOGISTICS --}}
         <div class="bg-white border rounded-lg p-5 shadow">
             <h4 class="font-bold mb-3 text-gray-800 border-b pb-2">Logistics Items</h4>
-            <div class="space-y-2">
+            <div class="space-y-3">
                 @forelse($event->logisticsItems as $item)
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">{{ $item->quantity }}× {{ $item->description }}</span>
-                        <span class="font-semibold text-gray-900">₱{{ number_format($item->subtotal, 2) }}</span>
+                    <div class="bg-gray-50 p-3 rounded-lg">
+                        <div class="flex justify-between items-start">
+                            <div class="min-w-0">
+                                <div class="text-sm font-medium text-gray-900">{{ $item->quantity }}× {{ $item->description }}</div>
+                                @if($item->assigned_name)
+                                    <div class="text-xs text-gray-500 mt-1">Assigned to: {{ $item->assigned_name }}@if($item->assigned_email) &middot; <span class="lowercase">{{ $item->assigned_email }}</span>@endif</div>
+                                @endif
+                            </div>
+                            <div class="text-right">
+                                <div class="font-semibold text-gray-900">₱{{ number_format($item->subtotal, 2) }}</div>
+                            </div>
+                        </div>
                     </div>
                 @empty
                     <p class="text-xs italic text-gray-400">No logistics items.</p>

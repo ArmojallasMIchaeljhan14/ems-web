@@ -156,6 +156,7 @@ class EventController extends Controller
                             $event->logisticsItems()->create([
                                 'resource_id'  => $resourceId,
                                 'description'  => $name,
+                                'employee_id'  => $item['employee_id'] ?? null,
                                 'quantity'     => $quantity,
                                 'unit_price'   => $unitPrice,
                                 'subtotal'     => $subtotal,
@@ -353,6 +354,7 @@ public function show(Event $event): View
                         $event->logisticsItems()->create([
                             'resource_id'  => $resourceId,
                             'description'  => $name,
+                            'employee_id'  => $item['employee_id'] ?? null,
                             'quantity'     => $quantity,
                             'unit_price'   => $unitPrice,
                             'subtotal'     => $subtotal,

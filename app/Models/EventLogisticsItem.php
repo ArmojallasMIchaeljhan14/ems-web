@@ -11,6 +11,7 @@ class EventLogisticsItem extends Model
         'event_id',
         'resource_id',
         'description',
+        'employee_id',
         'quantity',
         'unit_price',
         'subtotal',
@@ -29,6 +30,27 @@ class EventLogisticsItem extends Model
     public function resource()
     {
         return $this->belongsTo(Resource::class);
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * Helper accessor: assigned person's full name (employee)
+     */
+    public function getAssignedNameAttribute()
+    {
+        return $this->employee ? $this->employee->full_name : null;
+    }
+
+    /**
+     * Helper accessor: assigned person's email (employee)
+     */
+    public function getAssignedEmailAttribute()
+    {
+        return $this->employee ? $this->employee->email : null;
     }
 }
 

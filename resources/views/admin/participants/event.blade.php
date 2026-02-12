@@ -39,7 +39,7 @@
             </div>
         </div>
 
-        {{-- ADD FORM INLINE --}}
+    {{-- ADD FORM INLINE --}}
         <div class="bg-white rounded-lg border p-6 shadow-sm">
             <h3 class="text-lg font-semibold mb-4">Add Participant</h3>
 
@@ -202,6 +202,43 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        {{-- LOGISTICS SUMMARY FOR ADMINS --}}
+        <div class="bg-white rounded-lg border p-6 shadow-sm">
+            <h3 class="text-lg font-semibold mb-4">Logistics Items</h3>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Item</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Assigned</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse($event->logisticsItems as $item)
+                            <tr>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ $item->quantity }}× {{ $item->description }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    @if($item->assigned_name)
+                                        <div class="font-medium text-gray-900">{{ $item->assigned_name }}</div>
+                                        <div class="text-xs text-gray-500">{{ $item->assigned_email }}</div>
+                                    @else
+                                        <span class="text-xs italic text-gray-400">Unassigned</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-right font-semibold text-gray-900">₱{{ number_format($item->subtotal, 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-400 italic">No logistics items.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
 
