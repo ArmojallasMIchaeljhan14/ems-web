@@ -32,6 +32,24 @@ class EventService
             ->get();
     }
 
+    public function getUserEvents(User $user)
+    {
+        return Event::query()
+            ->where('requested_by', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    public function getPublishedEvents()
+    {
+        return Event::query()
+            ->where('status', Event::STATUS_PUBLISHED)
+            ->where('start_at', '>=', Carbon::now())
+            ->with('requestedBy')
+            ->orderBy('start_at', 'asc')
+            ->get();
+    }
+
     public function getTotalEventsCount(): int
     {
         return Event::count();
