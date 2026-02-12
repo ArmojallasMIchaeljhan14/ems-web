@@ -61,7 +61,9 @@
                                 @error('otp')
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
-                                <p class="mt-2 text-sm text-slate-500">Enter the code within 60 seconds to continue.</p>
+                                <p id="otp-countdown-message" class="mt-2 text-sm text-slate-500" aria-live="polite">
+                                    Enter the code within <span id="otp-seconds">{{ max(0, (int) $otpSecondsRemaining) }}</span> seconds to continue.
+                                </p>
                             </div>
 
                             <button
@@ -74,7 +76,12 @@
 
                         <form method="POST" action="{{ route('otp.resend') }}" class="mt-4 text-center">
                             @csrf
-                            <button type="submit" class="text-sm font-medium text-slate-500 transition hover:text-slate-700">
+                            <button
+                                id="resend-code-button"
+                                type="submit"
+                                class="text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400"
+                                @disabled(((int) $otpSecondsRemaining) > 0)
+                            >
                                 Resend code
                             </button>
                         </form>
@@ -88,6 +95,10 @@
         <script>
             const digits = Array.from(document.querySelectorAll('.otp-digit'));
             const otpHidden = document.getElementById('otp');
+            const countdownMessage = document.getElementById('otp-countdown-message');
+            const countdownSeconds = document.getElementById('otp-seconds');
+            const resendCodeButton = document.getElementById('resend-code-button');
+            let secondsRemaining = {{ max(0, (int) $otpSecondsRemaining) }};
 
             const syncOtp = () => {
                 otpHidden.value = digits.map((input) => input.value.replace(/\D/g, '')).join('');
@@ -141,6 +152,35 @@
                             digits[index].value = char;
                         }
                     });
+            }
+
+            const updateCountdownUi = () => {
+                if (!countdownMessage || !countdownSeconds || !resendCodeButton) {
+                    return;
+                }
+
+                countdownSeconds.textContent = String(secondsRemaining);
+
+                if (secondsRemaining <= 0) {
+                    countdownMessage.textContent = 'Code expired. You can resend a new code now.';
+                    resendCodeButton.disabled = false;
+                    return;
+                }
+
+                resendCodeButton.disabled = true;
+            };
+
+            updateCountdownUi();
+
+            if (secondsRemaining > 0) {
+                const countdownInterval = setInterval(() => {
+                    secondsRemaining = Math.max(0, secondsRemaining - 1);
+                    updateCountdownUi();
+
+                    if (secondsRemaining === 0) {
+                        clearInterval(countdownInterval);
+                    }
+                }, 1000);
             }
         </script>
     </body>
