@@ -30,7 +30,12 @@ class OtpVerificationController extends Controller
             return redirect()->route('login');
         }
 
-        return view('auth.verify-otp');
+        $expiresAt = (int) $request->session()->get('otp_expires_at', now()->timestamp);
+        $secondsRemaining = max(0, $expiresAt - now()->timestamp);
+
+        return view('auth.verify-otp', [
+            'otpSecondsRemaining' => $secondsRemaining,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -92,6 +97,7 @@ class OtpVerificationController extends Controller
         $otp = $this->generateOtp();
         Cache::put('otp:user:'.$userId, $otp, self::OTP_TTL_SECONDS);
         Cache::put($throttleKey, true, self::RESEND_THROTTLE_SECONDS);
+        $request->session()->put('otp_expires_at', now()->addSeconds(self::OTP_TTL_SECONDS)->timestamp);
 
         $user->notify(new OtpVerificationNotification($otp));
 

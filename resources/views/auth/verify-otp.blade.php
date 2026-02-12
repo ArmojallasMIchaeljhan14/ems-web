@@ -61,7 +61,9 @@
                                 @error('otp')
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
-                                <p class="mt-2 text-sm text-slate-500">Enter the code within 60 seconds to continue.</p>
+                                <p id="otp-timer" class="mt-2 text-sm text-slate-500" data-seconds="{{ $otpSecondsRemaining ?? 60 }}">
+                                    Enter the code within {{ $otpSecondsRemaining ?? 60 }} seconds to continue.
+                                </p>
                             </div>
 
                             <button
@@ -141,6 +143,29 @@
                             digits[index].value = char;
                         }
                     });
+            }
+
+            const timerElement = document.getElementById('otp-timer');
+            if (timerElement) {
+                let remainingSeconds = parseInt(timerElement.dataset.seconds || '0', 10);
+                const renderTimer = () => {
+                    if (remainingSeconds <= 0) {
+                        timerElement.textContent = 'Your code has expired. Please request a new code.';
+                        return false;
+                    }
+
+                    timerElement.textContent = `Enter the code within ${remainingSeconds} seconds to continue.`;
+                    return true;
+                };
+
+                if (renderTimer()) {
+                    const interval = setInterval(() => {
+                        remainingSeconds -= 1;
+                        if (! renderTimer()) {
+                            clearInterval(interval);
+                        }
+                    }, 1000);
+                }
             }
         </script>
     </body>
