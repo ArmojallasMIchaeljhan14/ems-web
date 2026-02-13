@@ -10,6 +10,7 @@ class VenueBooking extends Model
     protected $fillable = [
         'event_id',
         'venue_id',
+        'venue_location_id',
         'start_at',
         'end_at',
     ];
@@ -30,5 +31,10 @@ class VenueBooking extends Model
     public function venue(): BelongsTo
     {
         return $this->belongsTo(Venue::class);
+    }
+
+    public function venueLocation(): BelongsTo
+    {
+        return $this->belongsTo(VenueLocation::class);
     }
 }

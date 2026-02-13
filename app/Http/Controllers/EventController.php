@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EventFormRequest;
 use App\Models\Event;
 use App\Models\Venue;
+use App\Models\VenueBooking;
 use App\Models\Resource;
 use App\Models\Employee;
 use App\Models\Budget;
@@ -77,7 +78,7 @@ class EventController extends Controller
          */
         public function create(): View
         {
-            $venues = Venue::orderBy('name')->get();
+            $venues = Venue::with('locations')->orderBy('name')->get();
             $resources = Resource::orderBy('name')->get();
             $employees = Employee::orderBy('last_name')->get();
             $custodianMaterials = CustodianMaterial::orderBy('name')->get();
@@ -103,6 +104,25 @@ class EventController extends Controller
          */
         public function store(EventFormRequest $request): RedirectResponse
         {
+            // Prepare location IDs from either array or JSON
+            $locationIds = $request->venue_location_ids ?? [];
+            
+            // If venue_location_ids_json was sent (from hidden input), parse it
+            if (!empty($request->venue_location_ids_json) && empty($locationIds)) {
+                try {
+                    $locationIds = json_decode($request->venue_location_ids_json, true) ?? [];
+                } catch (\Exception $e) {
+                    $locationIds = [];
+                }
+            }
+            
+            // Validate that at least one location is selected
+            if (empty($locationIds)) {
+                return back()->withInput()->withErrors([
+                    'venue_location_ids' => 'Please select at least one venue location.'
+                ]);
+            }
+
             $isTaken = Venue::checkVenueAvailability(
                 $request->venue_id,
                 $request->start_at,
@@ -117,7 +137,7 @@ class EventController extends Controller
         }
 
         try {
-            $event = DB::transaction(function () use ($request) {
+            $event = DB::transaction(function () use ($request, $locationIds) {
 
                 // ================= CREATE EVENT =================
                 $event = Event::create([
@@ -130,6 +150,20 @@ class EventController extends Controller
                     'requested_by' => Auth::id(),
                     'status' => 'pending_approvals',
                 ]);
+
+                // ================= VENUE BOOKINGS =================
+                // Create a booking for each selected venue location
+                if (!empty($locationIds)) {
+                    foreach ($locationIds as $locationId) {
+                        VenueBooking::create([
+                            'event_id' => $event->id,
+                            'venue_id' => $request->venue_id,
+                            'venue_location_id' => $locationId,
+                            'start_at' => $request->start_at,
+                            'end_at' => $request->end_at,
+                        ]);
+                    }
+                }
 
                 $logisticsTotal = 0;
                 $budgetTotal = 0;

@@ -7,7 +7,7 @@
 
             <div class="flex gap-2">
                 <a href="{{ route('admin.venues.edit', $venue) }}"
-                   class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 transition">
+                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold text-xs uppercase tracking-widest hover:bg-indigo-700 transition">
                     Edit
                 </a>
 
@@ -24,111 +24,107 @@
 
             {{-- Venue Details Card --}}
             <div class="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mb-6">
-                <div class="grid md:grid-cols-2 gap-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Venue Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600">Address</label>
+                        <p class="text-gray-900 mt-1">{{ $venue->address }}</p>
+                    </div>
                     
-                    {{-- Left Column --}}
                     <div>
-                        <h3 class="text-xs font-bold uppercase text-indigo-600 mb-3">Venue Information</h3>
-
-                        <div class="space-y-4">
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase font-semibold">Name</p>
-                                <p class="text-lg font-bold text-gray-900">{{ $venue->name }}</p>
-                            </div>
-
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase font-semibold">Address</p>
-                                <p class="text-sm text-gray-700">{{ $venue->address }}</p>
-                            </div>
-
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase font-semibold">Capacity</p>
-                                <p class="text-sm font-bold text-blue-600">{{ $venue->capacity }} persons</p>
-                            </div>
-                        </div>
+                        <label class="block text-sm font-semibold text-gray-600">Overall Capacity</label>
+                        <p class="text-gray-900 mt-1">{{ $venue->capacity }} persons</p>
                     </div>
-
-                    {{-- Right Column --}}
-                    <div>
-                        <h3 class="text-xs font-bold uppercase text-indigo-600 mb-3">Facilities & Amenities</h3>
-
-                        @if($venue->facilities)
-                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $venue->facilities }}</p>
-                        @else
-                            <p class="text-sm text-gray-500 italic">No facilities listed</p>
-                        @endif
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-600">Amenities</label>
+                        <p class="text-gray-900 mt-1">{{ $venue->amenities ?? 'N/A' }}</p>
                     </div>
-
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-600">Facilities</label>
+                        <p class="text-gray-900 mt-1">{{ $venue->facilities ?? 'N/A' }}</p>
+                    </div>
                 </div>
             </div>
 
-            {{-- Scheduled Events --}}
-            <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-                
-                <div class="p-6 border-b">
-                    <h3 class="text-lg font-bold text-gray-900">
-                        Scheduled Events ({{ count($venue->events) }})
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500">Upcoming and active events at this venue</p>
-                </div>
+            {{-- Venue Locations --}}
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Venue Locations ({{ $venue->locations->count() }})</h3>
 
-                @forelse($venue->events as $event)
-
-                    <div class="px-6 py-4 border-b last:border-0 hover:bg-gray-50 transition">
-                        <div class="flex items-start justify-between">
+                @forelse($venue->locations as $location)
+                    <div class="bg-white shadow-sm rounded-xl border border-gray-200 mb-4 overflow-hidden">
+                        <button class="w-full text-left location-toggle px-6 py-4 hover:bg-gray-50 transition flex items-center justify-between"
+                                data-location-id="{{ $location->id }}">
                             <div class="flex-1">
-                                <h4 class="font-bold text-gray-900 text-base">
-                                    {{ $event->title }}
-                                </h4>
-
-                                <p class="mt-1 text-sm text-gray-600">
-                                    {{ $event->description ? Str::limit($event->description, 100) : 'No description' }}
+                                <h4 class="text-base font-bold text-gray-900">{{ $location->name }}</h4>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <span class="inline-block bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
+                                        Capacity: {{ $location->capacity }} persons
+                                    </span>
                                 </p>
+                            </div>
+                            <svg class="location-toggle-icon w-5 h-5 text-gray-600 transition-transform"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                        </button>
 
-                                <div class="mt-3 flex flex-wrap gap-3 text-xs">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-700">
-                                        📅 {{ $event->start_at->format('M d, Y') }}
-                                    </span>
+                        <div class="location-details hidden px-6 py-4 border-t border-gray-200 bg-gray-50"
+                             data-location-id="{{ $location->id }}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Amenities</label>
+                                    <p class="text-gray-700 mt-1">{{ $location->amenities ?? 'N/A' }}</p>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Facilities</label>
+                                    <p class="text-gray-700 mt-1">{{ $location->facilities ?? 'N/A' }}</p>
+                                </div>
 
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-700">
-                                        🕐 {{ $event->start_at->format('h:i A') }} - {{ $event->end_at->format('h:i A') }}
-                                    </span>
-
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md
-                                        @switch($event->status)
-                                            @case('pending_approvals') bg-yellow-100 text-yellow-800 @break
-                                            @case('approved') bg-blue-100 text-blue-800 @break
-                                            @case('published') bg-green-100 text-green-800 @break
-                                            @default bg-gray-100 text-gray-700
-                                        @endswitch">
-                                        {{ Str::headline($event->status) }}
-                                    </span>
-
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-indigo-100 text-indigo-800">
-                                        👥 {{ $event->number_of_participants }} participants
-                                    </span>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Bookings</label>
+                                    @forelse($location->venueBookings as $booking)
+                                        <div class="bg-white rounded border border-gray-200 p-2 mb-2 text-xs">
+                                            <p class="font-semibold text-gray-900">
+                                                {{ $booking->event->title ?? 'Event #' . $booking->event_id }}
+                                            </p>
+                                            <p class="text-gray-600">
+                                                {{ $booking->start_at->format('M d, Y H:i') }} - {{ $booking->end_at->format('H:i') }}
+                                            </p>
+                                        </div>
+                                    @empty
+                                        <p class="text-gray-500 italic text-xs">No bookings yet</p>
+                                    @endforelse
                                 </div>
                             </div>
-
-                            <a href="{{ route('events.show', $event) }}"
-                               class="ml-4 px-3 py-1.5 bg-indigo-100 text-indigo-700 text-xs rounded-md hover:bg-indigo-200 transition font-semibold whitespace-nowrap">
-                                View Details
-                            </a>
                         </div>
                     </div>
-
                 @empty
-
-                    <div class="px-6 py-12 text-center text-gray-500">
-                        <p class="text-base font-semibold">No events scheduled</p>
-                        <p class="text-sm mt-1">This venue currently has no active events</p>
+                    <div class="bg-white shadow-sm rounded-xl border border-gray-200 p-6 text-center">
+                        <p class="text-gray-500 italic">No locations added yet.</p>
                     </div>
-
                 @endforelse
-
             </div>
 
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.location-toggle').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const locationId = this.dataset.locationId;
+                    const details = document.querySelector(`.location-details[data-location-id="${locationId}"]`);
+                    const icon = this.querySelector('.location-toggle-icon');
+                    
+                    details.classList.toggle('hidden');
+                    icon.classList.toggle('rotate-180');
+                });
+            });
+        });
+    </script>
 </x-app-layout>

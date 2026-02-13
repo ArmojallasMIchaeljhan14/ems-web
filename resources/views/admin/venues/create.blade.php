@@ -6,7 +6,7 @@
             </h2>
 
             <a href="{{ route('admin.venues.index') }}"
-               class="inline-flex items-center px-4 py-2 bg-gray-100 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-200 transition">
+            class="inline-flex items-center px-4 py-2 bg-gray-100 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-200 transition">
                 ← Back
             </a>
         </div>
@@ -15,10 +15,10 @@
     <div class="py-10">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
 
-            {{-- Validation Errors --}}
+            {{-- Validation Errors Summary --}}
             @if ($errors->any())
-                <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                    <div class="font-bold mb-2">Fix the following:</div>
+                <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
+                    <div class="font-bold mb-2">Please fix the highlighted errors below.</div>
                     <ul class="list-disc list-inside text-sm">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -28,7 +28,7 @@
             @endif
 
             <form method="POST" action="{{ route('admin.venues.store') }}"
-                  class="bg-white shadow-sm rounded-xl border border-gray-200">
+                class="bg-white shadow-sm rounded-xl border border-gray-200">
                 @csrf
 
                 <div class="p-6 space-y-6">
@@ -39,11 +39,11 @@
                             Venue Name <span class="text-red-500">*</span>
                         </label>
                         <input type="text"
-                               name="name"
-                               value="{{ old('name') }}"
-                               placeholder="e.g., Main Conference Hall"
-                               class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                               required>
+                            name="name"
+                            value="{{ old('name') }}"
+                            placeholder="e.g., Grand Plaza Hotel"
+                            class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 @error('name') border-red-500 @enderror"
+                            required>
                         @error('name')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
@@ -55,174 +55,191 @@
                             Address <span class="text-red-500">*</span>
                         </label>
                         <textarea name="address"
-                                  rows="3"
-                                  placeholder="Complete address of the venue"
-                                  class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                  required>{{ old('address') }}</textarea>
+                                rows="3"
+                                placeholder="Complete street address, city, and zip code"
+                                class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 @error('address') border-red-500 @enderror"
+                                required>{{ old('address') }}</textarea>
                         @error('address')
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    {{-- Capacity --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Capacity (Number of Persons) <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number"
-                               name="capacity"
-                               value="{{ old('capacity') }}"
-                               placeholder="e.g., 500"
-                               min="1"
-                               class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                               required>
+                    {{-- Calculated Total Capacity Display --}}
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 transition-all">
+                        <p class="text-sm text-gray-600 mb-1">Total Venue Capacity:</p>
+                        
+                        <p class="text-3xl font-black text-indigo-900" id="total-capacity-display">0</p>
+                        
+                        <input type="hidden" name="capacity" id="total-capacity-input" value="{{ old('capacity', 0) }}">
+                        
+                        <p class="text-xs text-indigo-600 mt-1">Automatically summed from individual locations</p>
                         @error('capacity')
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500 font-bold">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    {{-- Campuses with Facilities & Amenities --}}
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-4">
-                            Select Campus, Facilities & Amenities
+                    {{-- Venue Locations (Rooms/Areas) --}}
+                    <div class="pt-4 border-t border-gray-100">
+                        <label class="block text-base font-bold text-gray-800 mb-4">
+                            Venue Locations (Rooms/Areas) <span class="text-red-500">*</span>
                         </label>
-                        <div class="space-y-4">
-                            @forelse($campuses as $campus)
-                                <div class="border border-indigo-200 rounded-lg p-4 bg-indigo-50">
-                                    {{-- Campus Checkbox --}}
-                                    <label class="flex items-center mb-4 cursor-pointer">
-                                        <input type="checkbox" 
-                                               name="campuses[]" 
-                                               value="{{ $campus->id }}"
-                                               class="campus-checkbox rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 cursor-pointer"
-                                               data-campus-id="{{ $campus->id }}">
-                                        <span class="ml-3 text-sm font-semibold text-gray-900">{{ $campus->name }}</span>
-                                        @if($campus->location)
-                                            <span class="ml-2 text-xs text-gray-600">({{ $campus->location }})</span>
-                                        @endif
-                                    </label>
+                        
+                        <div class="space-y-6" id="locations-container">
+                            @php
+                                $oldLocations = old('locations', [['name' => '', 'capacity' => '', 'amenities' => '']]);
+                            @endphp
 
-                                    {{-- Facilities for this Campus --}}
-                                    <div class="ml-6 space-y-3 campus-facilities" data-campus-id="{{ $campus->id }}">
-                                        @forelse($campus->facilities as $facility)
-                                            <div class="border border-gray-300 rounded-lg p-3 bg-white">
-                                                {{-- Facility Checkbox --}}
-                                                <label class="flex items-center mb-2 cursor-pointer">
-                                                    <input type="checkbox" 
-                                                           name="facilities[{{ $campus->id }}][]" 
-                                                           value="{{ $facility->id }}"
-                                                           class="facility-checkbox rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 cursor-pointer"
-                                                           data-campus-id="{{ $campus->id }}"
-                                                           disabled>
-                                                    <span class="ml-3 text-sm font-medium text-gray-800">{{ $facility->name }}</span>
-                                                    @if($facility->capacity)
-                                                        <span class="ml-2 text-xs text-gray-500">(Capacity: {{ $facility->capacity }})</span>
-                                                    @endif
-                                                </label>
+                            @foreach($oldLocations as $index => $location)
+                                <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 location-block relative" data-index="{{ $index }}">
+                                    <div class="grid md:grid-cols-3 gap-4 mb-4">
+                                        <div class="md:col-span-2">
+                                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                                Location Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="text"
+                                                name="locations[{{ $index }}][name]"
+                                                value="{{ $location['name'] ?? '' }}"
+                                                placeholder="e.g., Ballroom A"
+                                                class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 @error("locations.$index.name") border-red-500 @enderror"
+                                                required>
+                                            @error("locations.$index.name")
+                                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                            @enderror
+                                        </div>
 
-                                                {{-- Amenities for this Facility --}}
-                                                @if($facility->amenities->count())
-                                                    <div class="ml-6 mt-2 space-y-2 flex flex-wrap gap-2">
-                                                        @foreach($facility->amenities as $amenity)
-                                                            <label class="flex items-center cursor-pointer inline-flex px-3 py-1 bg-gray-100 rounded-full text-xs">
-                                                                <input type="checkbox" 
-                                                                       name="amenities[{{ $facility->id }}][]" 
-                                                                       value="{{ $amenity->id }}"
-                                                                       class="amenity-checkbox rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 cursor-pointer"
-                                                                       data-facility-id="{{ $facility->id }}"
-                                                                       disabled>
-                                                                <span class="ml-2 text-gray-700">{{ $amenity->name }}</span>
-                                                            </label>
-                                                        @endforeach
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @empty
-                                            <p class="text-xs text-gray-500 italic">No facilities available for this campus.</p>
-                                        @endforelse
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                                Capacity <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="number"
+                                                name="locations[{{ $index }}][capacity]"
+                                                value="{{ $location['capacity'] ?? '' }}"
+                                                placeholder="0"
+                                                min="1"
+                                                class="capacity-input w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 @error("locations.$index.capacity") border-red-500 @enderror"
+                                                required>
+                                            @error("locations.$index.capacity")
+                                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </div>
-                                </div>
-                            @empty
-                                <p class="text-sm text-gray-500 italic col-span-full">No campuses available. Please create campuses first.</p>
-                            @endforelse
-                        </div>
-                        @error('campuses')
-                            <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
 
-                    {{-- Additional Facilities Description --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Additional Facilities & Notes
-                        </label>
-                        <textarea name="facilities"
-                                  rows="3"
-                                  placeholder="Any other facilities or special notes about this venue"
-                                  class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">{{ old('facilities') }}</textarea>
-                        @error('facilities')
-                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
+                                    <div class="mb-4">
+                                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                            Amenities & Features
+                                        </label>
+                                        <input type="text" 
+                                            name="locations[{{ $index }}][amenities]"
+                                            value="{{ $location['amenities'] ?? '' }}"
+                                            placeholder="Wi-Fi, Projector, Stage..."
+                                            class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                    </div>
+
+                                    <button type="button" class="btn-remove-location inline-flex items-center text-sm text-red-600 hover:text-red-800 font-medium transition">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        Remove this location
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <button type="button" id="btn-add-location" class="mt-4 inline-flex items-center px-4 py-2 bg-white border border-indigo-600 rounded-md font-semibold text-xs text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 transition">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Add Another Location
+                        </button>
                     </div>
 
                 </div>
 
-                {{-- Footer Actions --}}
                 <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end space-x-3 rounded-b-xl">
                     <a href="{{ route('admin.venues.index') }}"
-                       class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition">
+                    class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition">
                         Cancel
                     </a>
 
                     <button type="submit"
-                            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 transition">
+                            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 transition shadow-sm">
                         Create Venue
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle campus checkbox changes
-            document.querySelectorAll('.campus-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const campusId = this.dataset.campusId;
-                    const facilitiesContainer = document.querySelector(`.campus-facilities[data-campus-id="${campusId}"]`);
-                    
-                    if (facilitiesContainer) {
-                        const facilityCheckboxes = facilitiesContainer.querySelectorAll('.facility-checkbox');
-                        const amenityCheckboxes = facilitiesContainer.querySelectorAll('.amenity-checkbox');
-                        
-                        // Enable/disable facilities
-                        facilityCheckboxes.forEach(cb => {
-                            cb.disabled = !this.checked;
-                            if (!this.checked) cb.checked = false;
-                        });
-                        
-                        // Enable/disable amenities
-                        amenityCheckboxes.forEach(cb => {
-                            cb.disabled = !this.checked;
-                            if (!this.checked) cb.checked = false;
-                        });
-                    }
+            const container = document.getElementById('locations-container');
+            const addBtn = document.getElementById('btn-add-location');
+            const totalDisplay = document.getElementById('total-capacity-display');
+            const totalInput = document.getElementById('total-capacity-input');
+            
+            let locationIndex = {{ count($oldLocations) }};
+
+            function updateTotalCapacity() {
+                let total = 0;
+                document.querySelectorAll('.capacity-input').forEach(input => {
+                    total += (parseInt(input.value) || 0);
                 });
+                
+                // Update BOTH the text and the hidden input
+                totalDisplay.textContent = total.toLocaleString();
+                totalInput.value = total;
+            }
+
+            function toggleRemoveButtons() {
+                const blocks = document.querySelectorAll('.location-block');
+                blocks.forEach(block => {
+                    const removeBtn = block.querySelector('.btn-remove-location');
+                    removeBtn.style.display = (blocks.length === 1) ? 'none' : 'inline-flex';
+                });
+            }
+
+            // Event Delegation for removing and typing
+            container.addEventListener('click', function(e) {
+                if (e.target.closest('.btn-remove-location')) {
+                    e.target.closest('.location-block').remove();
+                    updateTotalCapacity();
+                    toggleRemoveButtons();
+                }
             });
 
-            // Handle facility checkbox changes
-            document.querySelectorAll('.facility-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const facilityId = this.dataset.facilityId;
-                    const amenityCheckboxes = document.querySelectorAll(`.amenity-checkbox[data-facility-id="${facilityId}"]`);
-                    
-                    // Enable/disable amenities based on facility selection
-                    amenityCheckboxes.forEach(cb => {
-                        cb.disabled = !this.checked;
-                        if (!this.checked) cb.checked = false;
-                    });
-                });
+            container.addEventListener('input', function(e) {
+                if (e.target.classList.contains('capacity-input')) {
+                    updateTotalCapacity();
+                }
             });
+
+            addBtn.addEventListener('click', function() {
+                const html = `
+                    <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 location-block relative" data-index="${locationIndex}">
+                        <div class="grid md:grid-cols-3 gap-4 mb-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Location Name <span class="text-red-500">*</span></label>
+                                <input type="text" name="locations[${locationIndex}][name]" placeholder="e.g., Ballroom A" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Capacity <span class="text-red-500">*</span></label>
+                                <input type="number" name="locations[${locationIndex}][capacity]" placeholder="0" min="1" class="capacity-input w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Amenities & Features</label>
+                            <input type="text" name="locations[${locationIndex}][amenities]" placeholder="Wi-Fi, Projector..." class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <button type="button" class="btn-remove-location inline-flex items-center text-sm text-red-600 hover:text-red-800 font-medium transition">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Remove this location
+                        </button>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+                locationIndex++;
+                toggleRemoveButtons();
+            });
+
+            // Initial trigger
+            updateTotalCapacity();
+            toggleRemoveButtons();
         });
     </script>
+</x-app-layout>

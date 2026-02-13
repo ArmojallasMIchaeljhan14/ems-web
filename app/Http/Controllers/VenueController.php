@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venue;
+use App\Models\VenueBooking;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -155,7 +156,7 @@ class VenueController extends Controller
 
     /**
      * Return availability for a venue between start_at and end_at.
-     * Responds with JSON: { available: bool, conflicts: [ { id, title, start_at, end_at, status } ] }
+     * Responds with JSON: { available: bool, conflicts: [ { id, title, start_at, end_at, status, venue_location_id } ] }
      */
     public function availability(Request $request, Venue $venue): JsonResponse
     {
@@ -167,8 +168,11 @@ class VenueController extends Controller
         $start = Carbon::parse($data['start_at']);
         $end = Carbon::parse($data['end_at']);
 
-        $conflicts = $venue->events()
-            ->whereIn('status', ['pending_approvals', 'approved', 'published'])
+        // Get all venue bookings (across all locations) that conflict with the requested timeframe
+        $conflicts = VenueBooking::where('venue_id', $venue->id)
+            ->whereHas('event', function ($q) {
+                $q->whereIn('status', ['pending_approvals', 'approved', 'published']);
+            })
             ->where(function ($q) use ($start, $end) {
                 $q->whereBetween('start_at', [$start, $end])
                   ->orWhereBetween('end_at', [$start, $end])
@@ -176,18 +180,24 @@ class VenueController extends Controller
                       $q2->where('start_at', '<', $start)->where('end_at', '>', $end);
                   });
             })
-            ->get(['id', 'title', 'start_at', 'end_at', 'status']);
+            ->with('event')
+            ->get(['id', 'venue_location_id', 'start_at', 'end_at', 'event_id']);
 
-        // Format datetimes for frontend display
-        $conflicts->transform(function ($item) {
-            $item->start_at = $item->start_at->toDateTimeString();
-            $item->end_at = $item->end_at->toDateTimeString();
-            return $item;
-        });
+        // Format conflicts with event title for display
+        $formattedConflicts = $conflicts->map(function ($booking) {
+            return [
+                'id' => $booking->id,
+                'venue_location_id' => $booking->venue_location_id,
+                'title' => $booking->event->title ?? 'Event',
+                'start_at' => $booking->start_at->toDateTimeString(),
+                'end_at' => $booking->end_at->toDateTimeString(),
+                'status' => $booking->event->status ?? 'unknown',
+            ];
+        })->values();
 
         return response()->json([
             'available' => $conflicts->isEmpty(),
-            'conflicts' => $conflicts,
+            'conflicts' => $formattedConflicts,
         ]);
     }
 }
