@@ -7,6 +7,8 @@ use App\Models\Event;
 use App\Models\Participant;
 use App\Models\User;
 use App\Models\Employee;
+use App\Notifications\ParticipantTicketNotification;
+use App\Services\EventCheckInService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +17,10 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class ParticipantController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(
+        private readonly EventCheckInService $checkInService
+    ) {}
 
     /* =======================================================
        LIST EVENTS + PARTICIPANTS
@@ -26,7 +32,7 @@ class ParticipantController extends Controller
         // If an event was provided (route: admin.events.participants.index), show full event details
         if ($event) {
             // ensure event is visible to non-admin owners
-            if (!$isAdmin && $event->user_id !== $user->id) {
+            if (!$isAdmin && $event->requested_by !== $user->id) {
                 abort(403);
             }
 
@@ -55,7 +61,7 @@ class ParticipantController extends Controller
         $events = Event::query()
             ->with(['participants.user.roles', 'participants.employee'])
             ->when(!$isAdmin, fn ($q) =>
-                $q->where('user_id', $user->id)
+                $q->where('requested_by', $user->id)
             )
             // Only show published events on the participants index
             ->where('status', 'published')
@@ -65,7 +71,7 @@ class ParticipantController extends Controller
         $statsQuery = Participant::query()
             ->when(!$isAdmin, fn ($q) =>
                 $q->whereHas('event', fn ($e) =>
-                    $e->where('user_id', $user->id)
+                    $e->where('requested_by', $user->id)
                 )
             );
 
@@ -142,7 +148,15 @@ class ParticipantController extends Controller
          * ✅ Manual participants allowed
          * (user_id & employee_id can be NULL)
          */
-        Participant::create($validated);
+        $participant = Participant::create($validated);
+        $participant = $this->checkInService->ensureParticipantCredentials($participant);
+
+        if (! empty($participant->display_email) && $participant->display_email !== 'N/A') {
+            $ticketUrl = $this->checkInService->buildTicketUrl($participant);
+
+            \Notification::route('mail', $participant->display_email)
+                ->notify(new ParticipantTicketNotification($event, $participant, $ticketUrl));
+        }
 
         return redirect()
             ->route('admin.participants.index')
@@ -156,11 +170,12 @@ class ParticipantController extends Controller
     {
         abort_if($participant->event_id !== $event->id, 404);
 
-        if (!auth()->user()->isAdmin() && $event->user_id !== auth()->id()) {
+        if (!auth()->user()->isAdmin() && $event->requested_by !== auth()->id()) {
             abort(403);
         }
 
-        $participant->load(['user.roles', 'employee', 'attendances']);
+        $participant = $this->checkInService->ensureParticipantCredentials($participant);
+        $participant->load(['user.roles', 'employee', 'attendances', 'checkedInBy']);
 
         return view('admin.participants.show', compact('event', 'participant'));
     }

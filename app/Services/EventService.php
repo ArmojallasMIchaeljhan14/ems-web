@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Log;
 
 class EventService
 {
+    public function __construct(
+        private InAppNotificationService $inAppNotificationService
+    ) {}
+
     /**
      * -----------------------------------------------------------
      * DASHBOARD DATA METHODS
@@ -18,7 +22,7 @@ class EventService
 
     public function getPendingEvents()
     {
-        return Event::where('status', 'pending_approval')
+        return Event::where('status', Event::STATUS_PENDING_APPROVAL)
             ->with('requestedBy')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -167,6 +171,25 @@ class EventService
                 'title'    => $event->title,
             ]);
 
+            if ($event->requested_by) {
+                $requester = User::query()->find($event->requested_by);
+
+                if ($requester) {
+                    $this->inAppNotificationService->notifyUsers(
+                        users: [$requester],
+                        title: 'Event request approved',
+                        message: "Your event \"{$event->title}\" has been approved.",
+                        url: route('events.show', $event),
+                        category: 'activity',
+                        meta: [
+                            'event_id' => $event->id,
+                            'status' => $event->status,
+                        ],
+                        excludeUserId: $admin->id,
+                    );
+                }
+            }
+
             return $event;
         });
     }
@@ -193,6 +216,31 @@ class EventService
                 'title'    => $event->title,
                 'reason'   => $reason,
             ]);
+
+            if ($event->requested_by) {
+                $requester = User::query()->find($event->requested_by);
+
+                if ($requester) {
+                    $message = "Your event \"{$event->title}\" was rejected.";
+
+                    if ($reason) {
+                        $message .= " Reason: {$reason}";
+                    }
+
+                    $this->inAppNotificationService->notifyUsers(
+                        users: [$requester],
+                        title: 'Event request rejected',
+                        message: $message,
+                        url: route('events.show', $event),
+                        category: 'activity',
+                        meta: [
+                            'event_id' => $event->id,
+                            'status' => $event->status,
+                        ],
+                        excludeUserId: $admin->id,
+                    );
+                }
+            }
 
             return $event;
         });
@@ -221,6 +269,21 @@ class EventService
                 'admin_id' => $admin->id,
                 'title'    => $event->title,
             ]);
+
+            $recipients = User::query()->where('id', '!=', $admin->id)->get();
+
+            $this->inAppNotificationService->notifyUsers(
+                users: $recipients,
+                title: 'New event published',
+                message: "\"{$event->title}\" is now published.",
+                url: route('events.show', $event),
+                category: 'activity',
+                meta: [
+                    'event_id' => $event->id,
+                    'status' => $event->status,
+                ],
+                excludeUserId: $admin->id,
+            );
 
             return $event;
         });
@@ -324,7 +387,7 @@ class EventService
     private function formatEventsForCalendar($events)
     {
         $colors = [
-            'pending_approval' => '#f39c12', // Orange
+            Event::STATUS_PENDING_APPROVAL => '#f39c12', // Orange
             'approved'         => '#00c0ef', // Aqua
             'published'        => '#00a65a', // Green
             'rejected'         => '#dd4b39', // Red

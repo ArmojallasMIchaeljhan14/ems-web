@@ -17,7 +17,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->dateTime('start_at');
             $table->dateTime('end_at');
-            $table->string('status', 32)->default('pending_approval');
+            $table->string('status', 32)->default('pending_approvals');
             $table->foreignId('requested_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });

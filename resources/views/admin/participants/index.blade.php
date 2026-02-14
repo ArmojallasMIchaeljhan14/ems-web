@@ -123,7 +123,10 @@
 
                                     <td class="px-6 py-3 text-right">
                                         @if(auth()->user()->isAdmin() || ($event->user_id === auth()->id() && $event->status === 'published'))
-                                            <a href="{{ route('admin.events.participants.edit', [$event, $participant]) }}" class="text-blue-500 hover:text-blue-700">Edit</a>
+                                            <div class="flex items-center justify-end gap-3">
+                                                <a href="{{ route('admin.events.participants.show', [$event, $participant]) }}" class="text-gray-600 hover:text-gray-800">View Details</a>
+                                                <a href="{{ route('admin.events.participants.edit', [$event, $participant]) }}" class="text-blue-500 hover:text-blue-700">Edit</a>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
@@ -158,7 +161,10 @@
 
                                     <td class="px-6 py-3 text-right">
                                         @if(auth()->user()->isAdmin() || ($event->user_id === auth()->id() && $event->status === 'published'))
-                                            <a href="{{ route('admin.events.participants.edit', [$event, $participant]) }}" class="text-blue-500 hover:text-blue-700">Edit</a>
+                                            <div class="flex items-center justify-end gap-3">
+                                                <a href="{{ route('admin.events.participants.show', [$event, $participant]) }}" class="text-gray-600 hover:text-gray-800">View Details</a>
+                                                <a href="{{ route('admin.events.participants.edit', [$event, $participant]) }}" class="text-blue-500 hover:text-blue-700">Edit</a>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>

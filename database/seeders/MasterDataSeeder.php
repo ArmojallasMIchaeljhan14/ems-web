@@ -8,11 +8,16 @@ use App\Models\CustodianMaterial;
 use App\Models\Event;
 use App\Models\EventCustodianRequest;
 use App\Models\Venue;
+use Illuminate\Support\Facades\Schema;
 
 class MasterDataSeeder extends Seeder
 {
     public function run(): void
     {
+        $venueColumns = Schema::getColumnListing('venues');
+        $employeeColumns = Schema::getColumnListing('employees');
+        $materialColumns = Schema::getColumnListing('custodian_materials');
+
         // 1. Seed Venues (School Specific)
         // -----------------------------------------------------------
         $venues = [
@@ -49,7 +54,11 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($venues as $venue) {
-            Venue::create($venue);
+            $payload = $this->filterByColumns($venue, $venueColumns);
+            Venue::updateOrCreate(
+                ['name' => $venue['name']],
+                $payload
+            );
         }
 
         // 2. Seed Employees
@@ -228,9 +237,15 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($employees as $emp) {
+            $identity = ['employee_id_number' => $emp['employee_id_number']];
+            if (!in_array('employee_id_number', $employeeColumns, true)) {
+                $identity = ['email' => $emp['email']];
+            }
+
+            $payload = $this->filterByColumns($emp, $employeeColumns);
             Employee::updateOrCreate(
-                ['employee_id_number' => $emp['employee_id_number']],
-                $emp
+                $identity,
+                $payload
             );
         }
 
@@ -246,7 +261,11 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($materials as $mat) {
-            CustodianMaterial::create($mat);
+            $payload = $this->filterByColumns($mat, $materialColumns);
+            CustodianMaterial::updateOrCreate(
+                ['name' => $mat['name']],
+                $payload
+            );
         }
 
         // 4. Seed Sample Requests (Only if an event exists)
@@ -257,9 +276,10 @@ class MasterDataSeeder extends Seeder
             $material = CustodianMaterial::where('name', 'Folding Chairs')->first();
             
             if ($material) {
-                EventCustodianRequest::create([
+                EventCustodianRequest::updateOrCreate([
                     'event_id' => $event->id,
                     'custodian_material_id' => $material->id,
+                ], [
                     'quantity' => 20,
                     'status' => 'pending',
                 ]);
@@ -267,13 +287,19 @@ class MasterDataSeeder extends Seeder
 
             $soundSystem = CustodianMaterial::where('name', 'Sound System')->first();
             if ($soundSystem) {
-                EventCustodianRequest::create([
+                EventCustodianRequest::updateOrCreate([
                     'event_id' => $event->id,
                     'custodian_material_id' => $soundSystem->id,
+                ], [
                     'quantity' => 1,
                     'status' => 'approved',
                 ]);
             }
         }
+    }
+
+    private function filterByColumns(array $payload, array $columns): array
+    {
+        return array_intersect_key($payload, array_flip($columns));
     }
 }

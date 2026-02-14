@@ -11,7 +11,17 @@ class SupportMessage extends Model
         'support_ticket_id',
         'user_id',
         'body',
+        'is_system',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_system' => 'boolean',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     public function supportTicket(): BelongsTo
     {

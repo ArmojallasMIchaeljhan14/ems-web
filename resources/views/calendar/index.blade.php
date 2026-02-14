@@ -34,7 +34,8 @@
         switch ($e->status) {
             case 'published':        $bg='#d1fae5'; $border='#10b981'; break;
             case 'approved':         $bg='#dbeafe'; $border='#3b82f6'; break;
-            case 'pending_approval': $bg='#fef3c7'; $border='#f59e0b'; break;
+            case 'pending_approval':
+            case 'pending_approvals': $bg='#fef3c7'; $border='#f59e0b'; break;
             case 'rejected':         $bg='#fee2e2'; $border='#ef4444'; break;
             default:                 $bg='#f3f4f6'; $border='#9ca3af';
         }

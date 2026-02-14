@@ -22,17 +22,22 @@
                     </p>
                 </div>
 
-                <span class="px-4 py-1.5 rounded-full text-sm font-bold
-                    @switch($event->status)
-                        @case('pending_approval') @case('pending_approvals') bg-yellow-100 text-yellow-800 @break
-                        @case('approved') bg-blue-100 text-blue-800 @break
-                        @case('published') bg-green-100 text-green-800 @break
-                        @case('rejected') bg-red-100 text-red-800 @break
-                        @default bg-gray-100 text-gray-700
-                    @endswitch
-                ">
-                    {{ Str::headline($event->status) }}
-                </span>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('support.index', ['event_id' => $event->id]) }}" class="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-100">
+                        Need Help?
+                    </a>
+                    <span class="px-4 py-1.5 rounded-full text-sm font-bold
+                        @switch($event->status)
+                            @case('pending_approval') @case('pending_approvals') bg-yellow-100 text-yellow-800 @break
+                            @case('approved') bg-blue-100 text-blue-800 @break
+                            @case('published') bg-green-100 text-green-800 @break
+                            @case('rejected') bg-red-100 text-red-800 @break
+                            @default bg-gray-100 text-gray-700
+                        @endswitch
+                    ">
+                        {{ Str::headline($event->status) }}
+                    </span>
+                </div>
             </div>
 
             <div class="grid md:grid-cols-2 gap-6 p-6">

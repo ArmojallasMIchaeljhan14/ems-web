@@ -40,6 +40,11 @@ class RoleAndPermissionSeeder extends Seeder
             'adjust events',
             'view reports',
             'send documents',
+            'event check-in access',
+            'event check-in scan',
+            'event check-in manual',
+            'event check-in logs',
+            'event tickets print',
 
             // USER AREA
             'view user dashboard',

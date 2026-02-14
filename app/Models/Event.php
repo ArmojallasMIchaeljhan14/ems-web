@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Event extends Model
 {
-    public const STATUS_PENDING_APPROVAL = 'pending_approval';
+    public const STATUS_PENDING_APPROVAL = 'pending_approvals';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_PUBLISHED = 'published';
@@ -65,6 +65,11 @@ class Event extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function checkinLogs(): HasMany
+    {
+        return $this->hasMany(EventCheckinLog::class);
     }
 
     public function budget(): HasMany
@@ -129,9 +134,33 @@ class Event extends Model
         return $this->hasMany(EventRating::class);
     }
 
+<<<<<<< HEAD
     public function logisticsItems(): HasMany
     {
         return $this->hasMany(EventLogisticsItem::class);
+=======
+public function logisticsItems()
+{
+    return $this->hasMany(EventLogisticsItem::class);
+}
+
+public function supportTickets(): HasMany
+{
+    return $this->hasMany(SupportTicket::class);
+}
+
+public function isFinanceRequestApproved(): bool
+{
+    return $this->financeRequest
+        && $this->financeRequest->status === 'approved';
+}
+
+public function isCustodianApproved(): bool
+{
+    // If no custodian requests, treat as approved
+    if ($this->custodianRequests->count() === 0) {
+        return true;
+>>>>>>> 22348c87f71f97794f73e09baf04a2e89c21a2f8
     }
 
     // --- Logic / Helpers ---
@@ -148,6 +177,7 @@ class Event extends Model
             return true;
         }
 
+<<<<<<< HEAD
         return $this->custodianRequests->every(fn($r) => $r->status === 'approved');
     }
 
@@ -157,3 +187,6 @@ class Event extends Model
             && $this->isCustodianApproved();
     }
 }
+=======
+}
+>>>>>>> 22348c87f71f97794f73e09baf04a2e89c21a2f8

@@ -114,7 +114,7 @@ class EventFormRequest extends FormRequest
                 'nullable',
                 'string',
                 'in:' . implode(',', [
-                    'pending_approval',
+                    'pending_approvals',
                     'approved',
                     'rejected',
                     'published',

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventCheckInController;
 use App\Http\Controllers\MultimediaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProgramFlowController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\ParticipantController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VenueController;
 use App\Http\Controllers\EventPostController;
 use App\Http\Controllers\PostReactionController;
@@ -56,7 +58,34 @@ Route::middleware('auth')->group(function () {
     Route::post('/events/{event}/reject', [EventController::class, 'reject'])->name('events.reject');
     Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
 
+<<<<<<< HEAD
     
+=======
+    // Multimedia
+    Route::get('/multimedia', [MultimediaController::class, 'index'])->name('multimedia.index');
+
+    // Media posts (general authenticated access) served by MultimediaController
+    Route::get('/media/posts', [MultimediaController::class, 'posts'])->name('media.posts');
+    Route::get('/media/posts/{post}', [MultimediaController::class, 'postsShow'])
+        ->whereNumber('post')
+        ->name('media.posts.show');
+
+    // Event ratings
+    Route::post('/events/{event}/ratings', [\App\Http\Controllers\EventRatingController::class, 'store'])->name('events.ratings.store');
+
+    // Multimedia creation/editing protected by permissions (managed via RolePermissionController)
+    Route::get('/media/posts/create', [MultimediaController::class, 'postsCreate'])
+        ->middleware(['permission:create posts'])->name('media.posts.create');
+
+    Route::post('/media/posts', [MultimediaController::class, 'postsStore'])
+        ->middleware(['permission:create posts'])->name('media.posts.store');
+
+    // Deletion is authorized in controller (owner, admin, or 'manage all posts' permission)
+    Route::delete('/media/posts/{post}', [MultimediaController::class, 'postsDestroy'])
+        ->whereNumber('post')
+        ->name('media.posts.destroy');
+
+>>>>>>> 22348c87f71f97794f73e09baf04a2e89c21a2f8
     // Program Flow
     Route::get('/program-flow', [ProgramFlowController::class, 'index'])->name('program-flow.index');
     Route::get('/program-flow/{event}', [ProgramFlowController::class, 'show'])->name('program-flow.show');
@@ -69,13 +98,79 @@ Route::middleware('auth')->group(function () {
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/list', [NotificationController::class, 'list'])->name('notifications.list');
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.mark-read');
+    Route::patch('/notifications/{notification}/unread', [NotificationController::class, 'markUnread'])->name('notifications.mark-unread');
+    Route::get('/notifications/settings', [NotificationController::class, 'settings'])->name('notifications.settings');
+    Route::put('/notifications/settings', [NotificationController::class, 'updateSettings'])->name('notifications.settings.update');
 
     // Support
     Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+    Route::post('/support', [SupportController::class, 'store'])->name('support.store');
+    Route::get('/support/{ticket}', [SupportController::class, 'show'])->name('support.show');
+    Route::post('/support/{ticket}/messages', [SupportController::class, 'storeMessage'])->name('support.messages.store');
+    Route::patch('/support/{ticket}/close', [SupportController::class, 'close'])->name('support.close');
+    Route::patch('/support/{ticket}/status', [SupportController::class, 'updateStatus'])->name('support.status.update');
+
+    // Shared analytics dashboard with graphs
+    Route::get('/dashboard/insights', [DashboardController::class, 'insights'])->name('dashboard.insights');
+
+    // Reports (permission-based, available to any role with view reports permission)
+    Route::middleware('permission:view reports')
+        ->prefix('reports')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::get('/pipeline', [ReportController::class, 'pipeline'])->name('pipeline');
+            Route::get('/participants', [ReportController::class, 'participants'])->name('participants');
+            Route::get('/venues', [ReportController::class, 'venues'])->name('venues');
+            Route::get('/finance', [ReportController::class, 'finance'])->name('finance');
+            Route::get('/engagement', [ReportController::class, 'engagement'])->name('engagement');
+            Route::get('/support', [ReportController::class, 'support'])->name('support');
+            Route::get('/export/{section}', [ReportController::class, 'export'])
+                ->where('section', 'overview|pipeline|participants|venues|finance|engagement|support')
+                ->name('export');
+        });
 
     // Venue availability endpoint
     Route::get('/venues/{venue}/availability', [VenueController::class, 'availability'])->name('venues.availability');
+
+    // Event check-in module
+    Route::prefix('check-in')
+        ->name('checkin.')
+        ->middleware('permission:event check-in access')
+        ->group(function () {
+            Route::get('/', [EventCheckInController::class, 'index'])->name('index');
+            Route::get('/events/{event}', [EventCheckInController::class, 'show'])->name('show');
+            Route::post('/events/{event}/scan', [EventCheckInController::class, 'scan'])
+                ->middleware('permission:event check-in scan')
+                ->name('scan');
+            Route::post('/events/{event}/manual', [EventCheckInController::class, 'manual'])
+                ->middleware('permission:event check-in manual')
+                ->name('manual');
+            Route::get('/events/{event}/logs', [EventCheckInController::class, 'logs'])
+                ->middleware('permission:event check-in logs')
+                ->name('logs');
+            Route::get('/events/{event}/qr/{payload}', [EventCheckInController::class, 'qrEntry'])
+                ->middleware('permission:event check-in scan')
+                ->name('qr-entry');
+            Route::get('/events/{event}/participants/{participant}/ticket', [EventCheckInController::class, 'ticket'])
+                ->middleware('permission:event tickets print')
+                ->name('ticket');
+            Route::post('/events/{event}/participants/{participant}/ticket/resend', [EventCheckInController::class, 'resendTicket'])
+                ->middleware('permission:event tickets print')
+                ->name('ticket.resend');
+            Route::get('/events/{event}/participants/{participant}/qr/download', [EventCheckInController::class, 'downloadQr'])
+                ->middleware('permission:event tickets print')
+                ->name('qr.download');
+        });
 });
+
+Route::get('/tickets/{participant}', [EventCheckInController::class, 'publicTicket'])
+    ->middleware('signed')
+    ->name('checkin.tickets.show');
 
 
 /*
@@ -114,13 +209,20 @@ Route::middleware(['auth', 'role:admin'])
         // General participants list (Only for index/listing, avoiding create/store conflict)
         Route::get('/participants', [ParticipantController::class, 'index'])->name('participants.index');
 
-        Route::resource('reports', ReportController::class)->only(['index']);
         Route::resource('documents', DocumentController::class)->only(['index']);
+        Route::resource('users', UserController::class)->except(['show']);
 
         // Roles & Permissions
         Route::get('/roles', [RolePermissionController::class, 'index'])->name('roles.index');
-        Route::get('/roles/users/{user}/edit', [RolePermissionController::class, 'editUser'])->name('roles.edit-user');
-        Route::put('/roles/users/{user}', [RolePermissionController::class, 'updateUser'])->name('roles.update-user');
+        Route::get('/roles/create-role', [RolePermissionController::class, 'createRole'])->name('roles.create-role');
+        Route::post('/roles/create-role', [RolePermissionController::class, 'storeRole'])->name('roles.store-role');
+        Route::delete('/roles/role/{role}', [RolePermissionController::class, 'destroyRole'])->name('roles.destroy-role');
+        Route::get('/roles/permissions', [RolePermissionController::class, 'permissionsIndex'])->name('roles.permissions.index');
+        Route::get('/roles/create-permission', [RolePermissionController::class, 'createPermission'])->name('roles.create-permission');
+        Route::post('/roles/create-permission', [RolePermissionController::class, 'storePermission'])->name('roles.store-permission');
+        Route::get('/roles/permissions/{permission}/edit', [RolePermissionController::class, 'editPermission'])->name('roles.permissions.edit');
+        Route::put('/roles/permissions/{permission}', [RolePermissionController::class, 'updatePermission'])->name('roles.permissions.update');
+        Route::delete('/roles/permissions/{permission}', [RolePermissionController::class, 'destroyPermission'])->name('roles.permissions.destroy');
         Route::get('/roles/role/{role}/edit', [RolePermissionController::class, 'editRole'])->name('roles.edit-role');
         Route::put('/roles/role/{role}', [RolePermissionController::class, 'updateRole'])->name('roles.update-role');
     });
