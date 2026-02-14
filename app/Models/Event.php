@@ -134,6 +134,11 @@ public function logisticsItems()
     return $this->hasMany(EventLogisticsItem::class);
 }
 
+public function supportTickets(): HasMany
+{
+    return $this->hasMany(SupportTicket::class);
+}
+
 public function isFinanceRequestApproved(): bool
 {
     return $this->financeRequest

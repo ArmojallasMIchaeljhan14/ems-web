@@ -90,9 +90,21 @@ Route::middleware('auth')->group(function () {
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/list', [NotificationController::class, 'list'])->name('notifications.list');
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.mark-read');
+    Route::patch('/notifications/{notification}/unread', [NotificationController::class, 'markUnread'])->name('notifications.mark-unread');
+    Route::get('/notifications/settings', [NotificationController::class, 'settings'])->name('notifications.settings');
+    Route::put('/notifications/settings', [NotificationController::class, 'updateSettings'])->name('notifications.settings.update');
 
     // Support
     Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+    Route::post('/support', [SupportController::class, 'store'])->name('support.store');
+    Route::get('/support/{ticket}', [SupportController::class, 'show'])->name('support.show');
+    Route::post('/support/{ticket}/messages', [SupportController::class, 'storeMessage'])->name('support.messages.store');
+    Route::patch('/support/{ticket}/close', [SupportController::class, 'close'])->name('support.close');
+    Route::patch('/support/{ticket}/status', [SupportController::class, 'updateStatus'])->name('support.status.update');
 
     // Shared analytics dashboard with graphs
     Route::get('/dashboard/insights', [DashboardController::class, 'insights'])->name('dashboard.insights');

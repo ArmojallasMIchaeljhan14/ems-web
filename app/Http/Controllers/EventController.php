@@ -11,6 +11,7 @@ use App\Models\Employee;
 use App\Models\CustodianMaterial;
 use App\Models\EventLogisticsItem;
 use App\Services\EventService;
+use App\Services\InAppNotificationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,8 @@ class EventController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        private EventService $eventService
+        private EventService $eventService,
+        private InAppNotificationService $inAppNotificationService
     ) {}
 
     /**
@@ -249,6 +251,19 @@ class EventController extends Controller
 
                 return $event;
             });
+
+            $this->inAppNotificationService->notifyUsers(
+                users: $this->inAppNotificationService->adminUsers(),
+                title: 'New event request submitted',
+                message: Auth::user()->name . " submitted \"{$event->title}\" for review.",
+                url: route('events.show', $event),
+                category: 'activity',
+                meta: [
+                    'event_id' => $event->id,
+                    'status' => $event->status,
+                ],
+                excludeUserId: Auth::id(),
+            );
 
             return redirect()
                 ->route('events.index')
@@ -538,6 +553,19 @@ class EventController extends Controller
                 ]);
             }
         });
+
+        $this->inAppNotificationService->notifyUsers(
+            users: $this->inAppNotificationService->adminUsers(),
+            title: 'Event request updated',
+            message: Auth::user()->name . " updated \"{$event->title}\".",
+            url: route('events.show', $event),
+            category: 'activity',
+            meta: [
+                'event_id' => $event->id,
+                'status' => $event->status,
+            ],
+            excludeUserId: Auth::id(),
+        );
 
         return redirect()
             ->route('events.index')
