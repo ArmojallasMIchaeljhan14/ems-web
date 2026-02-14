@@ -317,4 +317,90 @@ class AIService
         
         return null;
     }
+    
+    /**
+     * Generate AI caption based on prompt and context
+     */
+    public function generateCaption(string $prompt, array $context = []): string
+    {
+        // For now, return a simulated AI caption
+        // In production, this would call actual AI services like OpenAI, Claude, etc.
+        $eventTitle = $context['title'] ?? 'Amazing Event';
+        $postType = $context['post_type'] ?? 'announcement';
+        $aiModel = $context['ai_model'] ?? 'gpt4';
+        $tone = $context['tone'] ?? 'professional';
+        
+        // Simulate AI processing delay
+        usleep(500000); // 0.5 seconds
+        
+        // Generate contextual caption based on parameters
+        $captions = [
+            'professional' => [
+                'invitation' => "🎋 You are cordially invited to {$eventTitle}. Join us for an exceptional networking and learning experience designed to foster meaningful connections and professional growth.",
+                'announcement' => "📢 We are pleased to announce {$eventTitle}, a premier gathering of industry leaders and innovators. This event promises to deliver valuable insights and unparalleled opportunities for collaboration.",
+                'highlight' => "✨ Reflecting on the tremendous success of {$eventTitle}. The event brought together distinguished professionals who engaged in thought-provoking discussions and forged valuable partnerships.",
+                'thank_you' => "🙏 We extend our sincere appreciation to everyone who participated in {$eventTitle}. Your presence and contributions were instrumental in creating an enriching experience.",
+                'reminder' => "⏰ This is a friendly reminder that {$eventTitle} is approaching. We encourage you to complete your registration and prepare for an engaging and productive event.",
+                'advertisement' => "🎬 Experience excellence at {$eventTitle}. This meticulously curated event offers unparalleled opportunities for professional development and networking.",
+            ],
+            'casual' => [
+                'invitation' => "🎉 Hey everyone! You're invited to {$eventTitle}! Come hang out with us for a fun time filled with great conversations and awesome people.",
+                'announcement' => "📢 Big news! We're hosting {$eventTitle} and we'd love for you to be there! Get ready for a chill time with cool people and interesting discussions.",
+                'highlight' => "✨ What an amazing time at {$eventTitle}! The energy was incredible, the conversations were engaging, and the connections made were genuine.",
+                'thank_you' => "🙏 Huge thanks to everyone who made {$eventTitle} awesome! Your energy, participation, and good vibes made it special.",
+                'reminder' => "⏰ Hey! {$eventTitle} is just around the corner! Don't forget to join us for what's going to be a fantastic time.",
+                'advertisement' => "🎬 Don't miss out on {$eventTitle}! It's going to be EPIC - great people, good conversations, and an all-around amazing time.",
+            ],
+        ];
+        
+        return $captions[$tone][$postType] ?? $captions['professional']['announcement'];
+    }
+    
+    /**
+     * Generate AI video from event data
+     */
+    public function generateVideoFromEvent($event, array $options = []): ?string
+    {
+        // For now, create a simple placeholder video
+        // In production, this would call actual AI video services like Runway, Pika, etc.
+        if (!$this->config['settings']['enable_fallback']) {
+            return null;
+        }
+        
+        try {
+            $ffmpegPath = $this->config['settings']['ffmpeg_path'] ?? 'ffmpeg';
+            $style = $options['style'] ?? 'slideshow';
+            $duration = $options['duration'] ?? 30;
+            $eventTitle = $options['event_title'] ?? $event->title ?? 'Amazing Event';
+            
+            $filename = 'ai-video-' . time() . '-' . Str::random(8) . '.mp4';
+            $path = 'post-media/' . $filename;
+            
+            // Create a simple color bar video with text overlay as placeholder
+            $tempImage = storage_path("app/temp/video-placeholder-" . time() . ".png");
+            
+            // Create a simple colored background with text using ImageMagick (if available)
+            $colorCommand = "convert -size 1920x1080 xc:'#4F46E5' -pointsize 72 -fill white -gravity center -annotate +0+0 '{$eventTitle}' {$tempImage} 2>&1";
+            shell_exec($colorCommand);
+            
+            // If ImageMagick failed, create a simple color video
+            if (!file_exists($tempImage)) {
+                $command = "$ffmpegPath -f lavfi -i color=#4F46E5:size=1920x1080:duration={$duration} -vf \"drawtext=text='{$eventTitle}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2\" -c:v libx264 -pix_fmt yuv420p " . storage_path("app/public/$path") . " 2>&1";
+            } else {
+                // Create video from the generated image
+                $command = "$ffmpegPath -loop 1 -i {$tempImage} -t {$duration} -vf \"scale=1920:1080,fps=24\" -c:v libx264 -pix_fmt yuv420p " . storage_path("app/public/$path") . " 2>&1";
+                unlink($tempImage); // Clean up temp image
+            }
+            
+            shell_exec($command);
+            
+            if (Storage::disk('public')->exists($path)) {
+                return $path;
+            }
+        } catch (\Exception $e) {
+            \Log::error('AI video generation failed: ' . $e->getMessage());
+        }
+        
+        return null;
+    }
 }

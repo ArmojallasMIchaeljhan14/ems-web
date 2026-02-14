@@ -166,6 +166,8 @@ Route::middleware(['auth', 'role:admin'])
         Route::resource('events', EventController::class);
 
         // Admin event bulk upload
+        Route::get('/events/bulk-upload-template', [EventController::class, 'downloadCsvTemplate'])
+            ->name('events.bulk-upload-template');
         Route::post('/events/bulk-upload', [EventController::class, 'bulkUpload'])
             ->name('events.bulk-upload');
 

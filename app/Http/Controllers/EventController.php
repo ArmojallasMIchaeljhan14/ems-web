@@ -680,14 +680,78 @@ class EventController extends Controller
     }
 
     /**
-     * Bulk upload (admin only).
+     * Download CSV template for bulk upload.
+     */
+    public function downloadCsvTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="events_bulk_upload_template.csv"',
+        ];
+
+        $callback = function () {
+            $file = fopen('php://output', 'w');
+
+            // Add UTF-8 BOM for proper Excel compatibility
+            fwrite($file, "\xEF\xBB\xBF");
+
+            // CSV Headers
+            fputcsv($file, [
+                'title',
+                'description',
+                'start_at',
+                'end_at',
+                'venue_id',
+                'number_of_participants',
+                'status'
+            ]);
+
+            // Sample data rows
+            fputcsv($file, [
+                'Annual Tech Summit 2024',
+                'A comprehensive technology conference featuring the latest innovations in AI, cloud computing, and cybersecurity.',
+                '2024-03-15 09:00:00',
+                '2024-03-15 17:00:00',
+                '1',
+                '150',
+                'pending_approvals'
+            ]);
+
+            fputcsv($file, [
+                'Team Building Workshop',
+                'Interactive workshop designed to improve team collaboration and communication skills.',
+                '2024-03-20 14:00:00',
+                '2024-03-20 18:00:00',
+                '2',
+                '50',
+                'pending_approvals'
+            ]);
+
+            fputcsv($file, [
+                'Product Launch Event',
+                'Official launch event for our new product line with demonstrations and networking opportunities.',
+                '2024-04-01 10:00:00',
+                '2024-04-01 15:00:00',
+                '3',
+                '200',
+                'pending_approvals'
+            ]);
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Bulk upload events from CSV (admin only).
      */
     public function bulkUpload(Request $request): RedirectResponse
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
         $request->validate([
-            'file' => 'required|mimes:csv,txt|max:10240',
+            'file' => 'required|mimes:csv,txt|max:10240', // 10MB max
         ]);
 
         $file = $request->file('file');
@@ -697,42 +761,93 @@ class EventController extends Controller
             return back()->withErrors('Unable to read uploaded file.');
         }
 
-        fgetcsv($handle);
+        // Read and validate headers
+        $headers = fgetcsv($handle);
+        $expectedHeaders = ['title', 'description', 'start_at', 'end_at', 'venue_id', 'number_of_participants', 'status'];
+        
+        if (!$headers || !empty(array_diff($expectedHeaders, array_map('strtolower', $headers)))) {
+            fclose($handle);
+            return back()->withErrors('Invalid CSV format. Please download the template and use the correct format.');
+        }
 
-        $count = 0;
+        $successCount = 0;
+        $errorCount = 0;
+        $errors = [];
 
         while (($row = fgetcsv($handle)) !== false) {
-            if (isset($row[0]) && trim($row[0]) === 'VENUE_REFERENCE') break;
-            if (count($row) < 5) continue;
-
-            [$title, $start, $end, $description, $venueId] = $row;
-
-            if (!Venue::where('id', $venueId)->exists()) continue;
-
-            // If CSV has bad dates, skip
-            try {
-                if (strtotime($end) <= strtotime($start)) continue;
-            } catch (\Exception $e) {
+            if (count($row) < 7) {
+                $errorCount++;
                 continue;
             }
 
-            Event::create([
-                'title' => $title,
-                'start_at' => $start,
-                'end_at' => $end,
-                'description' => $description,
-                'venue_id' => $venueId,
-                'status' => Event::STATUS_PENDING_APPROVAL,
-                'requested_by' => Auth::id(),
-            ]);
+            [$title, $description, $startAt, $endAt, $venueId, $participants, $status] = $row;
 
-            $count++;
+            // Skip empty rows
+            if (empty(trim($title))) {
+                continue;
+            }
+
+            try {
+                // Validate venue exists
+                if (!Venue::where('id', $venueId)->exists()) {
+                    $errors[] = "Venue ID '{$venueId}' not found for event: {$title}";
+                    $errorCount++;
+                    continue;
+                }
+
+                // Validate dates
+                $startDate = \Carbon\Carbon::parse($startAt);
+                $endDate = \Carbon\Carbon::parse($endAt);
+
+                if ($endDate <= $startDate) {
+                    $errors[] = "End date must be after start date for event: {$title}";
+                    $errorCount++;
+                    continue;
+                }
+
+                // Validate status
+                $validStatuses = [
+                    Event::STATUS_PENDING_APPROVAL,
+                    Event::STATUS_APPROVED,
+                    Event::STATUS_PUBLISHED,
+                    Event::STATUS_CANCELLED,
+                    Event::STATUS_COMPLETED
+                ];
+
+                if (!in_array($status, $validStatuses)) {
+                    $status = Event::STATUS_PENDING_APPROVAL;
+                }
+
+                // Create event
+                Event::create([
+                    'title' => trim($title),
+                    'description' => trim($description),
+                    'start_at' => $startDate,
+                    'end_at' => $endDate,
+                    'venue_id' => $venueId,
+                    'number_of_participants' => (int) $participants ?: 50,
+                    'status' => $status,
+                    'requested_by' => Auth::id(),
+                ]);
+
+                $successCount++;
+
+            } catch (\Exception $e) {
+                $errors[] = "Error processing event '{$title}': " . $e->getMessage();
+                $errorCount++;
+            }
         }
 
         fclose($handle);
 
+        $message = "Successfully uploaded {$successCount} events.";
+        if ($errorCount > 0) {
+            $message .= " Failed to upload {$errorCount} events.";
+            session(['bulk_upload_errors' => $errors]);
+        }
+
         return redirect()
             ->back()
-            ->with('success', "{$count} events uploaded and set to pending approval.");
+            ->with('success', $message);
     }
 }

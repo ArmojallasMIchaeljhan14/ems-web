@@ -13,6 +13,7 @@ class PostMedia extends Model
         'path',
         'thumbnail_path',
         'source',
+        'metadata',
     ];
 
     public function post(): BelongsTo

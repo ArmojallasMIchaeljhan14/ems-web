@@ -13,6 +13,7 @@ class EventPost extends Model
         'status',
         'caption',
         'ai_prompt',
+        'ai_generated_content',
         'scheduled_at',
     ];
 

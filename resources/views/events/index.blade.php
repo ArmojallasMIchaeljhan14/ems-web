@@ -1,6 +1,5 @@
 <x-app-layout>
-<div class="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8"
-     x-data="eventIndex()">
+<div class="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
 
     {{-- ================= HEADER ================= --}}
     <div class="flex justify-between items-center mb-8">
@@ -141,11 +140,11 @@
                             Expected Participants: {{ $event->number_of_participants ?? 0 }}
                         </span>
 
-                        <!-- <span class="badge">
+                        <span class="badge">
                             <a href="{{ route('events.participants.index', $event) }}" class="hover:underline">
                                 Registered: {{ $committeeCount }}
                             </a>
-                        </span> -->
+                        </span>
 
                         <span class="badge">
                             Logistics: {{ $logisticsCount }}
@@ -156,15 +155,15 @@
                         </span>
 
                         @if($logisticsTotal > 0)
-                            <span class="badge bg-green-50 text-green-700">
-                                Logistics Total:
+                            <span class="badge bg-orange-50 text-orange-700 font-semibold">
+                                Logistics:
                                 ₱{{ number_format($logisticsTotal, 2) }}
                             </span>
                         @endif
 
                         @if($budgetTotal > 0)
-                            <span class="badge bg-indigo-50 text-indigo-700">
-                                Budget Total:
+                            <span class="badge bg-indigo-50 text-indigo-800 font-semibold">
+                                Budget:
                                 ₱{{ number_format($budgetTotal, 2) }}
                             </span>
                         @endif
@@ -191,208 +190,61 @@
 
                 </div>
 
-                {{-- RIGHT ACTIONS --}}
-                <div class="flex flex-wrap gap-2 lg:mt-0">
-
-                    <a href="{{ route('events.show', $event) }}"
-                       class="btn-secondary text-violet-600">
-                        View Details
-                    </a>
-
-                        <!-- @if($canManageParticipants)
-                            <a href="{{ route('events.participants.index', $event) }}"
-                            class="btn-secondary text-purple-600">
-                                👥 Participants ({{ $committeeCount }})
-                            </a>
-                        @endif -->
-
-                    @role('admin')
-
-                        {{-- ================= APPROVE/REJECT (PENDING ONLY) ================= --}}
-                        @if($event->status === 'pending_approval' || $event->status === 'pending_approvals')
-
-                            {{-- APPROVE BUTTON (BLOCKED UNTIL REQUESTS APPROVED) --}}
-                            @if($canApproveEvent)
-
-                                <button
-                                    @click="setupModal(
-                                        '{{ route('events.approve', $event) }}',
-                                        'Approve Event Request',
-                                        'Confirm approval? This will mark the event as approved and ready to publish.',
-                                        'Approve',
-                                        'green'
-                                    )"
-                                    class="btn-success">
-                                    Approve
-                                </button>
-
-                            @else
-
-                                <button
-                                    @click="setupModal(
-                                        '',
-                                        'Approval Blocked',
-                                        '{{ $blockedText ?: "Some required approvals are still pending." }}',
-                                        'Understood',
-                                        'gray',
-                                        false,
-                                        true
-                                    )"
-                                    class="btn-disabled">
-                                    Approve
-                                </button>
-
+                {{-- RIGHT CONTENT --}}
+                <div class="flex flex-col items-end gap-3 lg:ml-6">
+                    <div class="flex gap-2">
+                        <a href="{{ route('events.show', $event) }}" 
+                           class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition">
+                            View
+                        </a>
+                        
+                        @if(auth()->user()->isAdmin())
+                            @if($event->status === 'pending_approvals')
+                                <form action="{{ route('events.approve', $event) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 transition">
+                                        Approve
+                                    </button>
+                                </form>
                             @endif
-
-
-                            {{-- REJECT BUTTON ALWAYS ALLOWED --}}
-                            <button
-                                @click="setupModal(
-                                    '{{ route('events.reject', $event) }}',
-                                    'Reject Event',
-                                    'This will cancel the request and remove associated logistics and budget records.',
-                                    'Reject',
-                                    'red'
-                                )"
-                                class="btn-danger">
-                                Reject
-                            </button>
-
+                            
+                            @if($event->status === 'approved')
+                                <form action="{{ route('events.publish', $event) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit"
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 transition">
+                                        Publish
+                                    </button>
+                                </form>
+                            @endif
                         @endif
-
-                        {{-- ================= PUBLISH (APPROVED ONLY) ================= --}}
-                        @if($event->status === 'approved')
-
-                            <button
-                                @click="setupModal(
-                                    '{{ route('events.publish', $event) }}',
-                                    'Publish Event',
-                                    'This makes the event visible in the public calendar.',
-                                    'Publish Now',
-                                    'indigo'
-                                )"
-                                class="btn-primary">
-                                Publish
-                            </button>
-
-                        @endif
-
-                        {{-- ================= DELETE ================= --}}
-                        @if($event->status === 'published')
-
-                            <button
-                                @click="setupModal(
-                                    '',
-                                    'Action Blocked',
-                                    'Published events cannot be deleted. Unpublish first.',
-                                    'Understood',
-                                    'gray',
-                                    false,
-                                    true
-                                )"
-                                class="btn-disabled">
-                                Delete
-                            </button>
-
-                        @else
-
-                            <button
-                                @click="setupModal(
-                                    '{{ route('events.destroy', $event) }}',
-                                    'Delete Event',
-                                    'Are you sure? This will permanently delete all related logistics and budget data.',
-                                    'Delete Permanently',
-                                    'red',
-                                    true
-                                )"
-                                class="btn-danger-outline text-red-600">
-                                Delete
-                            </button>
-
-                        @endif
-
-                    @endrole
+                    </div>
                 </div>
+
             </div>
 
         @empty
-            <div class="text-center py-12 text-gray-500">
-                No events found.
+
+            <div class="p-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No events found</h3>
+                <p class="mt-1 text-sm text-gray-500">Get started by creating a new event request.</p>
+                <div class="mt-6">
+                    <a href="{{ route('events.create') }}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition">
+                        + Request New Event
+                    </a>
+                </div>
             </div>
+
         @endforelse
 
     </div>
-
-    {{-- ================= MODAL ================= --}}
-    <div x-show="showModal"
-         x-transition
-         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 p-4"
-         x-cloak>
-
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full"
-             @click.away="showModal = false">
-
-            <div class="p-6">
-                <h2 class="text-lg font-bold text-gray-900" x-text="modalTitle"></h2>
-                <p class="mt-3 text-sm text-gray-600" x-text="modalBody"></p>
-            </div>
-
-            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-                <button @click="showModal=false"
-                        class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Cancel
-                </button>
-
-                <template x-if="!isInfoOnly">
-                    <form :action="actionUrl" method="POST">
-                        @csrf
-                        <template x-if="isDelete">
-                            <input type="hidden" name="_method" value="DELETE">
-                        </template>
-
-                        <button type="submit"
-                                class="px-4 py-2 text-sm font-bold text-white rounded-lg"
-                                :class="{
-                                    'bg-green-600 hover:bg-green-700': modalColor === 'green',
-                                    'bg-red-600 hover:bg-red-700': modalColor === 'red',
-                                    'bg-indigo-600 hover:bg-indigo-700': modalColor === 'indigo',
-                                    'bg-gray-600 hover:bg-gray-700': modalColor === 'gray'
-                                }"
-                                x-text="modalButtonText">
-                        </button>
-                    </form>
-                </template>
-            </div>
-        </div>
-    </div>
 </div>
-
-{{-- ================= ALPINE ================= --}}
-<script>
-function eventIndex(){
-    return {
-        showModal:false,
-        actionUrl:'',
-        modalTitle:'',
-        modalBody:'',
-        modalButtonText:'',
-        modalColor:'indigo',
-        isDelete:false,
-        isInfoOnly:false,
-
-        setupModal(url,title,body,btnText,color,isDeleteAction=false,isInfo=false){
-            this.actionUrl = url;
-            this.modalTitle = title;
-            this.modalBody = body;
-            this.modalButtonText = btnText;
-            this.modalColor = color;
-            this.isDelete = isDeleteAction;
-            this.isInfoOnly = isInfo;
-            this.showModal = true;
-        }
-    }
-}
-</script>
+</x-app-layout>
 
 {{-- ================= REUSABLE BUTTON STYLES ================= --}}
 <style>
@@ -404,5 +256,3 @@ function eventIndex(){
 .btn-secondary{ @apply px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-md hover:bg-gray-200; }
 .btn-disabled{ @apply px-3 py-1.5 bg-gray-100 text-gray-400 text-xs rounded-md cursor-not-allowed; }
 </style>
-
-</x-app-layout>

@@ -1,4 +1,13 @@
 <x-app-layout>
+    <!-- Global Loading Screen -->
+    <div id="global-loader" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+            <p class="text-gray-700 font-medium">Processing...</p>
+            <p id="loader-message" class="text-sm text-gray-500 mt-1">Please wait</p>
+        </div>
+    </div>
+
     <div class="max-w-4xl mx-auto py-6 space-y-6">
 
         {{-- HEADER --}}
@@ -163,7 +172,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Upload Images or Videos</label>
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors relative">
                             <input type="file" name="media[]" multiple accept="image/*,video/*" class="hidden" id="media-upload">
                             <label for="media-upload" class="cursor-pointer">
                                 <div class="text-gray-400">
@@ -172,8 +181,23 @@
                                     </svg>
                                 </div>
                                 <p class="mt-2 text-sm text-gray-600">Click to upload images or videos</p>
-                                <p class="text-xs text-gray-500">PNG, JPG, MP4 up to 10MB each</p>
+                                <p class="text-xs text-gray-500">PNG, JPG, MP4, MOV up to 50MB each</p>
                             </label>
+                            
+                            <!-- Upload Progress -->
+                            <div id="upload-progress" class="hidden mt-4">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600">Uploading...</span>
+                                    <span id="upload-percentage" class="text-xs text-gray-600">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div id="upload-progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <p id="upload-status" class="text-xs text-gray-500 mt-1">Preparing upload...</p>
+                            </div>
+                            
+                            <!-- File List -->
+                            <div id="file-list" class="mt-4 space-y-2"></div>
                         </div>
                     </div>
 
@@ -374,6 +398,98 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- AI Narrative Generator -->
+                    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                                <span class="text-xl mr-2">📖</span>
+                                AI Narrative Generator
+                            </h3>
+                            <div class="flex items-center space-x-2 text-xs text-green-600">
+                                <span class="animate-pulse">✨</span>
+                                <span class="font-medium">Story Mode</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Narrative Style</label>
+                                    <select name="narrative_style" class="w-full text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="epic">🎭 Epic Story</option>
+                                        <option value="journey">🛤️ Hero's Journey</option>
+                                        <option value="mystery">🔍 Mystery & Discovery</option>
+                                        <option value="inspiration">🌟 Inspirational Tale</option>
+                                        <option value="behind_scenes">🎬 Behind the Scenes</option>
+                                        <option value="future_vision">🔮 Future Vision</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Tone</label>
+                                    <select name="narrative_tone" class="w-full text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="dramatic">🎪 Dramatic</option>
+                                        <option value="heartwarming">💝 Heartwarming</option>
+                                        <option value="suspenseful">⚡ Suspenseful</option>
+                                        <option value="uplifting">🚀 Uplifting</option>
+                                        <option value="intimate">🤫 Intimate</option>
+                                        <option value="grand">🏰 Grand & Majestic</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Story Elements (Optional)</label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="story_elements[]" value="characters" class="mr-1.5 text-indigo-600 rounded">
+                                        <span class="text-xs">Characters</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="story_elements[]" value="conflict" class="mr-1.5 text-indigo-600 rounded">
+                                        <span class="text-xs">Conflict</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="story_elements[]" value="resolution" class="mr-1.5 text-indigo-600 rounded">
+                                        <span class="text-xs">Resolution</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="story_elements[]" value="emotion" class="mr-1.5 text-indigo-600 rounded">
+                                        <span class="text-xs">Emotion</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="story_elements[]" value="symbolism" class="mr-1.5 text-indigo-600 rounded">
+                                        <span class="text-xs">Symbolism</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="story_elements[]" value="metaphor" class="mr-1.5 text-indigo-600 rounded">
+                                        <span class="text-xs">Metaphor</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Narrative Length</label>
+                                <select name="narrative_length" class="w-full text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="short">📝 Short (150-200 words)</option>
+                                    <option value="medium">📄 Medium (300-400 words)</option>
+                                    <option value="long">📚 Long (500-600 words)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Custom Narrative Prompt (Optional)</label>
+                                <textarea name="narrative_prompt" rows="2" placeholder="E.g., Focus on the journey of overcoming challenges..." 
+                                          class="w-full text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            </div>
+
+                            <button type="button" onclick="generateNarrative()" 
+                                    class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold py-2 px-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center justify-center">
+                                <span>📖</span>
+                                <span class="ml-1">Generate Narrative</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- AI Processing Status -->
@@ -411,6 +527,22 @@
                         <button type="button" onclick="applyHashtags()" class="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
                             Add Hashtags
                         </button>
+                    </div>
+                    
+                    <!-- Narrative Preview -->
+                    <div id="narrative-preview" class="hidden p-4 bg-gray-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-gray-700 mb-2">Generated Narrative</h5>
+                        <div id="generated-narrative" class="text-sm text-gray-600 max-h-60 overflow-y-auto whitespace-pre-line"></div>
+                        <div class="mt-3 flex space-x-2">
+                            <button type="button" onclick="applyNarrative()" 
+                                    class="bg-indigo-600 text-white text-xs px-3 py-1 rounded hover:bg-indigo-700">
+                                Apply to Caption
+                            </button>
+                            <button type="button" onclick="copyNarrative()" 
+                                    class="bg-gray-600 text-white text-xs px-3 py-1 rounded hover:bg-gray-700">
+                                Copy to Clipboard
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Media Preview -->
@@ -456,6 +588,151 @@
 </x-app-layout>
 
 <script>
+// Global Loading Screen
+function showGlobalLoader(message = 'Processing...') {
+    const loader = document.getElementById('global-loader');
+    const loaderMessage = document.getElementById('loader-message');
+    loaderMessage.textContent = message;
+    loader.classList.remove('hidden');
+}
+
+function hideGlobalLoader() {
+    const loader = document.getElementById('global-loader');
+    loader.classList.add('hidden');
+}
+
+// File Upload Management
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const uploadedFiles = [];
+
+document.getElementById('media-upload').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    const fileList = document.getElementById('file-list');
+    const uploadProgress = document.getElementById('upload-progress');
+    
+    files.forEach((file, index) => {
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            showFileError(file.name, `File size (${fileSizeMB}MB) exceeds the 50MB limit`);
+            return;
+        }
+        
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/mov', 'video/avi'];
+        if (!allowedTypes.includes(file.type)) {
+            showFileError(file.name, 'File type not supported. Please use PNG, JPG, GIF, MP4, MOV, or AVI');
+            return;
+        }
+        
+        uploadedFiles.push(file);
+        showFileUpload(file, index);
+    });
+    
+    // Simulate upload progress
+    if (files.length > 0) {
+        simulateUploadProgress();
+    }
+});
+
+function showFileUpload(file, index) {
+    const fileList = document.getElementById('file-list');
+    const fileItem = document.createElement('div');
+    fileItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-lg';
+    fileItem.id = `file-${index}`;
+    
+    const isVideo = file.type.startsWith('video/');
+    const fileIcon = isVideo ? '🎬' : '🖼️';
+    const fileSize = (file.size / (1024 * 1024)).toFixed(1);
+    
+    fileItem.innerHTML = `
+        <div class="flex items-center">
+            <span class="text-lg mr-2">${fileIcon}</span>
+            <div>
+                <p class="text-sm font-medium text-gray-900">${file.name}</p>
+                <p class="text-xs text-gray-500">${fileSize}MB</p>
+            </div>
+        </div>
+        <button type="button" onclick="removeFile(${index})" class="text-red-500 hover:text-red-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    `;
+    
+    fileList.appendChild(fileItem);
+}
+
+function showFileError(fileName, error) {
+    const fileList = document.getElementById('file-list');
+    const errorItem = document.createElement('div');
+    errorItem.className = 'flex items-center justify-between p-2 bg-red-50 border border-red-200 rounded-lg';
+    
+    errorItem.innerHTML = `
+        <div class="flex items-center">
+            <span class="text-lg mr-2">❌</span>
+            <div>
+                <p class="text-sm font-medium text-red-900">${fileName}</p>
+                <p class="text-xs text-red-700">${error}</p>
+            </div>
+        </div>
+    `;
+    
+    fileList.appendChild(errorItem);
+    
+    // Auto-remove error after 5 seconds
+    setTimeout(() => {
+        errorItem.remove();
+    }, 5000);
+}
+
+function removeFile(index) {
+    const fileItem = document.getElementById(`file-${index}`);
+    if (fileItem) {
+        fileItem.remove();
+        uploadedFiles.splice(index, 1);
+    }
+}
+
+function simulateUploadProgress() {
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const percentage = document.getElementById('upload-percentage');
+    const status = document.getElementById('upload-status');
+    
+    uploadProgress.classList.remove('hidden');
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 100) progress = 100;
+        
+        progressBar.style.width = progress + '%';
+        percentage.textContent = Math.round(progress) + '%';
+        
+        if (progress < 30) {
+            status.textContent = 'Preparing upload...';
+        } else if (progress < 60) {
+            status.textContent = 'Uploading file...';
+        } else if (progress < 90) {
+            status.textContent = 'Processing file...';
+        } else if (progress < 100) {
+            status.textContent = 'Finalizing...';
+        } else {
+            status.textContent = 'Upload complete!';
+            clearInterval(interval);
+            setTimeout(() => {
+                uploadProgress.classList.add('hidden');
+            }, 2000);
+        }
+    }, 200);
+}
+
+// Form submission with loading
+document.querySelector('form').addEventListener('submit', function(e) {
+    showGlobalLoader('Creating your post...');
+});
+
 // Character counter
 const captionTextarea = document.querySelector('textarea[name="caption"]');
 const charCount = document.getElementById('char-count');
@@ -495,15 +772,7 @@ function generateAICaption() {
     button.textContent = 'Generating...';
     button.disabled = true;
     
-    showAIStatus('AI is analyzing your event and generating captions...', 20);
-    
-    setTimeout(() => {
-        showAIStatus('Crafting the perfect tone and style...', 50);
-    }, 800);
-    
-    setTimeout(() => {
-        showAIStatus('Optimizing for engagement...', 80);
-    }, 1500);
+    showGlobalLoader('AI is generating your caption...');
     
     setTimeout(() => {
         const selectedEvent = document.querySelector('input[name="event_id"]:checked');
@@ -596,20 +865,12 @@ function generateAICaption() {
             aiCaption += `\n\n💭 ${aiPrompt}`;
         }
         
-        // Add model signature
-        const modelSignatures = {
-            gpt4: '\n\n🤖 Generated with GPT-4',
-            claude: '\n\n🎭 Crafted by Claude',
-            gemini: '\n\n💎 Powered by Gemini'
-        };
-        aiCaption += modelSignatures[selectedModel] || '';
-        
         // Show preview
         document.getElementById('generated-caption').textContent = aiCaption;
         document.getElementById('caption-preview').classList.remove('hidden');
         document.getElementById('ai-preview').classList.remove('hidden');
         
-        showAIStatus('Caption generated successfully!', 100);
+        hideGlobalLoader();
         
         button.textContent = originalText;
         button.disabled = false;
@@ -697,6 +958,8 @@ function generateVideo() {
     setTimeout(() => {
         const videoStyle = document.querySelector('select[name="video_style"]')?.value || 'slideshow';
         const addMusic = document.querySelector('input[name="add_music"]')?.checked || false;
+        const selectedEvent = document.querySelector('input[name="event_id"]:checked');
+        const eventTitle = selectedEvent?.parentElement?.querySelector('.font-medium')?.textContent || 'Event';
         
         const videoDescriptions = {
             slideshow: 'Dynamic slideshow with smooth transitions',
@@ -710,27 +973,192 @@ function generateVideo() {
         const videoDesc = videoDescriptions[videoStyle] || 'Video created';
         const musicText = addMusic ? ' with background music' : '';
         
+        // Create a hidden input to store AI video data
+        const aiVideoData = {
+            style: videoStyle,
+            music: addMusic,
+            eventTitle: eventTitle,
+            description: videoDesc + musicText,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Add hidden input for form submission
+        let aiVideoInput = document.querySelector('input[name="ai_video_data"]');
+        if (!aiVideoInput) {
+            aiVideoInput = document.createElement('input');
+            aiVideoInput.type = 'hidden';
+            aiVideoInput.name = 'ai_video_data';
+            document.querySelector('form').appendChild(aiVideoInput);
+        }
+        aiVideoInput.value = JSON.stringify(aiVideoData);
+        
         mediaList.innerHTML = `
-            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                 <div class="flex items-center">
                     <span class="text-2xl mr-3">🎬</span>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">Video Generated</p>
+                        <p class="text-sm font-medium text-gray-900">AI Video Generated</p>
                         <p class="text-xs text-gray-600">${videoDesc}${musicText}</p>
+                        <p class="text-xs text-green-600 mt-1">🤖 AI-powered video will be created on post submission</p>
                     </div>
                 </div>
-                <span class="text-green-600 text-sm font-medium">✓ Created</span>
+                <div class="flex items-center space-x-2">
+                    <span class="text-green-600 text-sm font-medium">✓ Ready</span>
+                    <button type="button" onclick="removeAIVideo()" class="text-red-500 hover:text-red-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         `;
         
         document.getElementById('media-preview').classList.remove('hidden');
         document.getElementById('ai-preview').classList.remove('hidden');
         
-        showAIStatus('Video created successfully!', 100);
+        showAIStatus('AI video ready for generation!', 100);
         
         button.textContent = originalText;
         button.disabled = false;
     }, 4000);
+}
+
+// Remove AI video
+function removeAIVideo() {
+    const aiVideoInput = document.querySelector('input[name="ai_video_data"]');
+    if (aiVideoInput) {
+        aiVideoInput.remove();
+    }
+    
+    const mediaList = document.getElementById('enhanced-media-list');
+    mediaList.innerHTML = '';
+    
+    document.getElementById('media-preview').classList.add('hidden');
+    if (document.getElementById('caption-preview').classList.contains('hidden') && 
+        document.getElementById('hashtags-preview').classList.contains('hidden')) {
+        document.getElementById('ai-preview').classList.add('hidden');
+    }
+}
+
+// AI Narrative Generation
+function generateNarrative() {
+    const button = event.target;
+    const originalText = button.textContent;
+    
+    button.textContent = 'Creating...';
+    button.disabled = true;
+    
+    showGlobalLoader('AI is crafting your narrative...');
+    
+    setTimeout(() => {
+        const selectedEvent = document.querySelector('input[name="event_id"]:checked');
+        const selectedType = document.querySelector('input[name="type"]:checked');
+        const narrativeStyle = document.querySelector('select[name="narrative_style"]')?.value || 'epic';
+        const narrativeTone = document.querySelector('select[name="narrative_tone"]')?.value || 'dramatic';
+        const narrativeLength = document.querySelector('select[name="narrative_length"]')?.value || 'medium';
+        const narrativePrompt = document.querySelector('textarea[name="narrative_prompt"]')?.value || '';
+        
+        const eventTitle = selectedEvent?.parentElement?.querySelector('.font-medium')?.textContent || 'this amazing event';
+        const postType = selectedType?.value || 'announcement';
+        
+        // Get selected story elements
+        const storyElements = Array.from(document.querySelectorAll('input[name="story_elements[]"]:checked'))
+            .map(cb => cb.value);
+        
+        // Narrative templates based on style and tone
+        const narrativeTemplates = {
+            epic: {
+                dramatic: {
+                    short: `In the grand tapestry of ${eventTitle}, a dramatic chapter unfolds. Like ancient heroes answering the call, participants gather at this pivotal moment. The air crackles with anticipation as destinies intertwine. This is not merely an event—it is a saga in the making, where legends are born and stories echo through eternity. The stage is set, the players assembled, and history awaits its next great tale.`,
+                    medium: `In the grand tapestry of human achievement, certain moments stand as pillars upon which futures are built. ${eventTitle} emerges as such a moment—a convergence of vision, courage, and possibility. As dawn breaks on this gathering, we witness the assembly of modern-day heroes, each carrying dreams that burn brighter than stars. The atmosphere is electric with the weight of destiny, as if the universe itself holds its breath in anticipation. Here, in this sacred space of ambition and excellence, the ordinary transforms into extraordinary. The journey that brought each soul to this moment is unique, yet the purpose unites them in a common quest for greatness. Through challenges faced and battles won, these trailblazers embody the very essence of human resilience. As the narrative unfolds, we become part of something larger than ourselves—a living testament to the power of dreams and the courage to pursue them. This is more than an event; it is the birthplace of tomorrow's legends.`,
+                    long: `In the grand tapestry of human achievement, certain moments stand as pillars upon which futures are built—moments that transcend time and space, where the collective aspirations of humanity converge in a symphony of purpose. ${eventTitle} emerges as such a moment—a beacon of hope and possibility in a world hungry for inspiration. As dawn breaks on this gathering, we witness the assembly of modern-day heroes, each carrying dreams that burn brighter than stars and hopes that stretch beyond the horizon. The atmosphere is electric with the weight of destiny, as if the universe itself holds its breath in anticipation of the magic about to unfold. Here, in this sacred space of ambition and excellence, the ordinary transforms into extraordinary, and the impossible becomes possible. The journey that brought each soul to this moment is unique—a tapestry woven with threads of struggle, triumph, sacrifice, and unwavering determination. Through challenges faced and battles won, these trailblazers embody the very essence of human resilience and the indomitable spirit that propels civilization forward. As the narrative unfolds, we become part of something larger than ourselves—a living testament to the power of dreams and the courage to pursue them against all odds. This is more than an event; it is the birthplace of tomorrow's legends, the crucible where futures are forged, and the sanctuary where hope finds its voice. In these hallowed halls, where innovation meets inspiration and passion dances with purpose, we witness the dawn of a new era—one that will be remembered for generations to come as the turning point, the moment when everything changed.`
+                },
+                heartwarming: {
+                    short: `Like a gentle river flowing through the landscape of human connection, ${eventTitle} brings hearts together in unexpected ways. Here, strangers become friends, and friends become family. The warmth of shared experiences creates bonds that transcend time and distance, weaving a beautiful story of community and love.`,
+                    medium: `In a world that often moves too fast, ${eventTitle} stands as a gentle reminder of the power of human connection. Like a warm embrace on a cold day, this gathering wraps participants in a blanket of acceptance, understanding, and genuine care. Here, in this sanctuary of kindness, stories are shared not with words, but with hearts that beat in rhythm with one another. The magic begins the moment someone enters the room—shoulders relax, smiles appear naturally, and the weight of the world seems to lift, replaced by the lightness of belonging. Each interaction becomes a thread in the rich tapestry of community, weaving together diverse backgrounds, experiences, and dreams into a beautiful mosaic of humanity. As the day unfolds, we witness small miracles: a tear of joy, a laugh that echoes with pure happiness, a hug that says everything words cannot express. These are the moments that matter, the instances that restore our faith in the goodness of people and remind us that, despite our differences, we are all connected by the universal language of love.`,
+                    long: `In a world that often moves too fast, chasing after tomorrow while forgetting the beauty of today, ${eventTitle}} stands as a gentle reminder of the power of human connection and the magic that happens when we slow down long enough to truly see one another. Like a warm embrace on a cold day or a lighthouse guiding ships safely to shore, this gathering wraps participants in a blanket of acceptance, understanding, and genuine care that transcends the boundaries that often separate us. Here, in this sanctuary of kindness and compassion, stories are shared not with words, but with hearts that beat in rhythm with one another, creating a symphony of empathy that resonates throughout the space. The magic begins the moment someone enters the room—shoulders relax, smiles appear naturally, and the weight of the world seems to lift, replaced by the lightness of belonging to something greater than oneself. Each interaction becomes a thread in the rich tapestry of community, weaving together diverse backgrounds, experiences, and dreams into a beautiful mosaic of humanity that celebrates both our uniqueness and our shared journey. As the day unfolds, we witness small miracles that restore our faith in the goodness of people: a tear of joy that speaks volumes about the power of vulnerability, a laugh that echoes with pure happiness and reminds us of the simple joys of life, a hug that says everything words cannot express about acceptance and love, a conversation that changes someone's perspective forever, a moment of understanding that bridges gaps we thought were unbridgeable. These are the moments that matter, the instances that restore our faith in humanity and remind us that, despite our differences, we are all connected by the universal language of love and the fundamental need to belong, to be seen, to be heard, and to matter.`
+                }
+            },
+            journey: {
+                uplifting: {
+                    short: `Every great journey begins with a single step, and ${eventTitle} represents that pivotal first step toward transformation. Like heroes answering the call to adventure, participants embark on a path of discovery, growth, and revelation. The road ahead may be unknown, but with courage as their compass and dreams as their destination, they are ready to write the next chapter of their extraordinary story.`,
+                    medium: `The hero's journey is as old as time itself—a tale of ordinary people called to extraordinary purposes, of leaving comfort zones to discover the strength that lies dormant within. ${eventTitle} embodies this timeless narrative, serving as both the call to adventure and the gathering place for modern-day heroes ready to embark on transformative journeys. Each participant arrives with their own backstory, their own dragons to slay, their own mountains to climb, yet they are united by a common thread: the courage to answer when opportunity knocks. The path that led them here was paved with challenges that forged their character, with moments of doubt that tested their resolve, and with victories that hinted at their true potential. Now, standing at this threshold of possibility, they prepare to cross into a new realm of understanding and capability. The journey ahead promises not just external achievements, but internal revolutions—shifts in perspective that will ripple outward to touch every aspect of their lives. As they share their stories and learn from one another, they discover that they are not alone on this path; they are part of a fellowship of dreamers and doers, each supporting the others in their quest for greatness. This is more than an event—it is the launching pad for legends in the making, the starting line for races that will change the world.`,
+                    long: `The hero's journey is as old as time itself—a universal narrative that resonates across cultures, generations, and geographical boundaries. It speaks to something deep within the human spirit: the call to adventure, the longing for transformation, the courage to leave behind the familiar in pursuit of something greater. ${eventTitle} embodies this timeless narrative, serving as both the call to adventure and the gathering place for modern-day heroes ready to embark on transformative journeys that will redefine not just their lives, but the very essence of who they are meant to become. Each participant arrives with their own backstory, their own dragons to slay, their own mountains to climb, yet they are united by a common thread that binds them all: the courage to answer when opportunity knocks, the wisdom to recognize moments that can change everything, and the faith to take the first step into the unknown. The path that led them here was rarely straight or easy—it was paved with challenges that forged their character like steel in fire, with moments of doubt that tested their resolve and forced them to dig deeper than they thought possible, with failures that taught them invaluable lessons about resilience and perseverance, and with victories that hinted at the vast potential lying dormant within them. Now, standing at this threshold of possibility, surrounded by others who understand the weight and wonder of their individual journeys, they prepare to cross into a new realm of understanding and capability. The journey ahead promises not just external achievements and accolades, but internal revolutions—paradigm shifts in perspective that will ripple outward to touch every aspect of their lives and relationships. As they share their stories and learn from one another's experiences, they discover that they are not alone on this path; they are part of a fellowship of dreamers and doers, each supporting the others in their quest for greatness, each serving as both teacher and student in this grand classroom of life. This is more than an event—it is the launching pad for legends in the making, the starting line for races that will change the world, the moment when ordinary people decide to become extraordinary.`
+                }
+            }
+        };
+        
+        // Get the appropriate narrative or create a custom one
+        let narrative = '';
+        try {
+            const styleTemplates = narrativeTemplates[narrativeStyle] || narrativeTemplates.epic;
+            const toneTemplates = styleTemplates[narrativeTone] || styleTemplates.dramatic;
+            narrative = toneTemplates[narrativeLength] || toneTemplates.medium;
+        } catch (e) {
+            narrative = `The story of ${eventTitle} begins with a spark of imagination—a vision that dared to dream of something more. Like all great tales, this one brings together diverse characters, each with their own chapter, their own struggles, and their own triumphs. As their paths converge at this moment, they discover that individual stories, when woven together, create something magical: a community bound by purpose, strengthened by diversity, and united in the pursuit of excellence. This is their moment, their chance to be part of something that will be remembered long after the final page is written.`;
+        }
+        
+        // Add custom prompt if provided
+        if (narrativePrompt.trim()) {
+            narrative += `\n\n${narrativePrompt}`;
+        }
+        
+        // Add story elements
+        if (storyElements.length > 0) {
+            narrative += `\n\n✨ Story elements: ${storyElements.join(', ')}`;
+        }
+        
+        // Show preview
+        document.getElementById('generated-narrative').textContent = narrative;
+        document.getElementById('narrative-preview').classList.remove('hidden');
+        document.getElementById('ai-preview').classList.remove('hidden');
+        
+        hideGlobalLoader();
+        
+        button.textContent = originalText;
+        button.disabled = false;
+    }, 2500);
+}
+
+// Apply narrative to caption
+function applyNarrative() {
+    const generatedNarrative = document.getElementById('generated-narrative').textContent;
+    const currentCaption = captionTextarea.value;
+    
+    if (currentCaption && !currentCaption.endsWith(' ')) {
+        captionTextarea.value = currentCaption + '\n\n' + generatedNarrative;
+    } else {
+        captionTextarea.value = currentCaption + generatedNarrative;
+    }
+    
+    charCount.textContent = captionTextarea.value.length;
+    captionTextarea.dispatchEvent(new Event('input'));
+    
+    setTimeout(() => {
+        document.getElementById('narrative-preview').classList.add('hidden');
+    }, 1000);
+}
+
+// Copy narrative to clipboard
+function copyNarrative() {
+    const generatedNarrative = document.getElementById('generated-narrative').textContent;
+    
+    navigator.clipboard.writeText(generatedNarrative).then(() => {
+        // Show success feedback
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.classList.add('bg-green-600');
+        button.classList.remove('bg-gray-600');
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('bg-green-600');
+            button.classList.add('bg-gray-600');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy narrative: ', err);
+    });
 }
 
 // AI Hashtag Generation

@@ -44,6 +44,128 @@
 
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
 
+            {{-- Bulk Upload Section (Admin Only) --}}
+            @if(auth()->user()->isAdmin())
+                <div class="mb-8 bg-white shadow-sm rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Bulk Upload Events
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-600">Upload multiple events at once using a CSV file</p>
+                    </div>
+                    
+                    <div class="p-6">
+                        {{-- Success/Error Messages --}}
+                        @if(session('success'))
+                            <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                                {{ session('success') }}
+                            </div>
+                        @endif
+                        
+                        @if($errors->any())
+                            <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                                <div class="font-bold mb-2">Please fix the following:</div>
+                                <ul class="list-disc list-inside text-sm">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        
+                        @if(session('bulk_upload_errors'))
+                            <div class="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+                                <div class="font-bold mb-2">Upload Errors:</div>
+                                <ul class="list-disc list-inside text-sm max-h-40 overflow-y-auto">
+                                    @foreach(session('bulk_upload_errors') as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {{-- Download Template --}}
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <h4 class="mt-2 text-lg font-medium text-gray-900">Download CSV Template</h4>
+                                <p class="mt-1 text-sm text-gray-500">Get the pre-formatted template with sample data</p>
+                                <a href="{{ route('events.bulk-upload-template') }}" 
+                                   class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:border-indigo-900 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Download Template
+                                </a>
+                            </div>
+                            
+                            {{-- Upload CSV --}}
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                                <form action="{{ route('events.bulk-upload') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                                    @csrf
+                                    
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    
+                                    <h4 class="text-lg font-medium text-gray-900 text-center">Upload CSV File</h4>
+                                    <p class="text-sm text-gray-500 text-center">Fill the template and upload your CSV file</p>
+                                    
+                                    <div class="flex items-center justify-center w-full">
+                                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <svg class="w-8 h-8 mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                                                <p class="text-xs text-gray-500">CSV files only (MAX. 10MB)</p>
+                                            </div>
+                                            <input type="file" name="file" class="hidden" accept=".csv,.txt" />
+                                        </label>
+                                    </div>
+                                    
+                                    <button type="submit" 
+                                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        Upload Events
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        {{-- Instructions --}}
+                        <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h4 class="text-sm font-semibold text-blue-900 mb-2">📋 Instructions:</h4>
+                            <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                                <li>Download the CSV template using the button above</li>
+                                <li>Fill in your event data following the format</li>
+                                <li>Make sure venue IDs exist in the system</li>
+                                <li>Use proper date format: YYYY-MM-DD HH:MM:SS</li>
+                                <li>Valid statuses: pending_approvals, approved, published, cancelled, completed</li>
+                                <li>Upload the filled CSV file</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                
+                {{-- Divider --}}
+                <div class="relative py-6">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-gray-50 text-gray-500">OR CREATE SINGLE EVENT</span>
+                    </div>
+                </div>
+            @endif
+
             {{-- Validation Errors --}}
             @if ($errors->any())
                 <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
@@ -911,3 +1033,45 @@
     </script>
 
 </x-app-layout>
+
+<script>
+// File upload UI enhancement
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"][name="file"]');
+    const uploadLabel = fileInput?.parentElement;
+    
+    if (fileInput && uploadLabel) {
+        fileInput.addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                uploadLabel.querySelector('p.font-semibold').textContent = fileName;
+                uploadLabel.classList.add('border-green-500', 'bg-green-50');
+                uploadLabel.classList.remove('border-gray-300', 'bg-gray-50');
+            }
+        });
+        
+        // Drag and drop functionality
+        uploadLabel.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+        
+        uploadLabel.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+        
+        uploadLabel.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-indigo-500', 'bg-indigo-50');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        });
+    }
+});
+</script>

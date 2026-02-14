@@ -32,90 +32,109 @@ class EventPostController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Debug: Log the incoming request data
+        \Log::info('EventPostController::store - Request data:', $request->all());
+        
         $request->validate([
             'event_id' => ['required', 'exists:events,id'],
             'type' => ['required', 'in:invitation,announcement,highlight,thank_you,reminder,advertisement'],
             'caption' => ['nullable', 'string', 'max:5000'],
-            'ai_prompt' => ['nullable', 'string', 'max:1000'],
-            'media.*' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif,mp4,mov,avi', 'max:10240'], // 10MB max
-            'generate_ai_content' => ['nullable', 'boolean'],
-            'generate_ai_video' => ['nullable', 'boolean'],
-            'media_processing' => ['nullable', 'in:original,enhance,advertisement,video'],
+            'media.*' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif,mp4,mov,avi', 'max:51200'], // 50MB max
+            'ai_video_data' => ['nullable', 'string'],
+            'narrative_style' => ['nullable', 'in:epic,journey,mystery,inspiration,behind_scenes,future_vision'],
+            'narrative_tone' => ['nullable', 'in:dramatic,heartwarming,suspenseful,uplifting,intimate,grand'],
+            'narrative_length' => ['nullable', 'in:short,medium,long'],
+            'narrative_prompt' => ['nullable', 'string', 'max:1000'],
+            'story_elements' => ['nullable', 'array'],
+            'story_elements.*' => ['nullable', 'in:characters,conflict,resolution,emotion,symbolism,metaphor'],
         ]);
+
+        \Log::info('EventPostController::store - Validation passed');
 
         $event = Event::findOrFail($request->event_id);
         $caption = $request->caption;
 
-        // Generate AI caption if requested and no caption provided
-        if ($request->generate_ai_content && empty($caption)) {
-            $caption = $this->generateAICaption($event, $request->type, $request->ai_prompt);
+        // Check if caption contains AI narrative
+        $hasNarrative = false;
+        if ($caption && (strpos($caption, '✨ Story elements:') !== false || strlen($caption) > 300)) {
+            $hasNarrative = true;
         }
 
-        $post = EventPost::create([
+        \Log::info('EventPostController::store - Creating post with data:', [
             'event_id' => $request->event_id,
             'user_id' => Auth::id(),
             'type' => $request->type,
-            'status' => 'draft',
             'caption' => $caption,
-            'ai_prompt' => $request->ai_prompt,
+            'has_narrative' => $hasNarrative,
         ]);
+
+        try {
+            $post = EventPost::create([
+                'event_id' => $request->event_id,
+                'user_id' => Auth::id(),
+                'type' => $request->type,
+                'status' => 'draft',
+                'caption' => $caption,
+                'ai_prompt' => $request->narrative_prompt, // Store narrative prompt in ai_prompt field
+                'ai_generated_content' => $hasNarrative,
+            ]);
+
+            \Log::info('EventPostController::store - Post created successfully with ID: ' . $post->id);
+        } catch (\Exception $e) {
+            \Log::error('EventPostController::store - Failed to create post: ' . $e->getMessage());
+            throw $e;
+        }
 
         // Handle media uploads
         if ($request->hasFile('media')) {
+            \Log::info('EventPostController::store - Processing media uploads');
             foreach ($request->file('media') as $index => $mediaFile) {
                 $path = $mediaFile->store('post-media', 'public');
-                
                 $mediaType = str_starts_with($mediaFile->getMimeType(), 'image/') ? 'image' : 'video';
-                $source = 'upload';
                 
-                // Process media based on selected option
-                if ($request->media_processing === 'video' && $mediaType === 'image') {
-                    // Generate AI short video from image
-                    $videoPath = $this->generateAIVideo($mediaFile, $event, $request->type);
-                    if ($videoPath) {
-                        $path = $videoPath;
-                        $mediaType = 'video';
-                        $source = 'ai_video';
-                    }
-                } elseif ($request->media_processing === 'enhance' && $mediaType === 'image') {
-                    // AI enhance image
-                    $enhancedPath = $this->enhanceImage($mediaFile, $event, $request->type);
-                    if ($enhancedPath) {
-                        $path = $enhancedPath;
-                        $source = 'ai_enhanced';
-                    }
-                } elseif ($request->media_processing === 'advertisement' && $mediaType === 'image') {
-                    // Generate advertisement-style content
-                    $adPath = $this->generateAdvertisement($mediaFile, $event, $request->type);
-                    if ($adPath) {
-                        $path = $adPath;
-                        $source = 'ai_advertisement';
-                    }
-                }
+                \Log::info('EventPostController::store - Creating media record:', [
+                    'path' => $path,
+                    'type' => $mediaType,
+                    'post_id' => $post->id,
+                ]);
                 
                 $post->media()->create([
                     'path' => $path,
                     'type' => $mediaType,
-                    'source' => $source,
+                    'source' => 'upload',
                 ]);
             }
         }
 
-        // Generate AI video if requested without uploaded media
-        if ($request->generate_ai_video && !$request->hasFile('media')) {
-            $videoPath = $this->generateAIVideoFromEvent($event, $request->type);
-            if ($videoPath) {
-                $post->media()->create([
-                    'path' => $videoPath,
-                    'type' => 'video',
-                    'source' => 'ai_video',
-                ]);
+        // Handle AI video generation from frontend
+        if ($request->ai_video_data) {
+            \Log::info('EventPostController::store - Processing AI video data');
+            $aiVideoData = json_decode($request->ai_video_data, true);
+            if ($aiVideoData) {
+                $videoPath = $this->generateAdvancedAIVideo($event, $request->type, $aiVideoData);
+                if ($videoPath) {
+                    $post->media()->create([
+                        'path' => $videoPath,
+                        'type' => 'video',
+                        'source' => 'ai_video',
+                        'metadata' => json_encode([
+                            'ai_generated' => true,
+                            'style' => $aiVideoData['style'] ?? 'slideshow',
+                            'music' => $aiVideoData['music'] ?? false,
+                            'event_title' => $aiVideoData['eventTitle'] ?? $event->title,
+                            'description' => $aiVideoData['description'] ?? 'AI-generated video',
+                            'timestamp' => $aiVideoData['timestamp'] ?? now()->toISOString(),
+                        ]),
+                    ]);
+                }
             }
         }
 
+        \Log::info('EventPostController::store - About to redirect to multimedia.index');
+        
         return redirect()
             ->route('multimedia.index')
-            ->with('success', 'Post created successfully!');
+            ->with('success', 'Post created successfully!' . ($hasNarrative ? ' AI narrative included.' : ''));
     }
 
     private function generateAICaption(Event $event, string $postType, ?string $customPrompt = null): string
@@ -324,6 +343,129 @@ class EventPostController extends Controller
         ];
 
         return $prompts[$postType] ?? $prompts['advertisement'];
+    }
+
+    private function generateAdvancedAICaption(Event $event, string $postType, ?string $customPrompt = null, ?string $aiModel = 'gpt4', ?string $captionTone = 'professional'): string
+    {
+        // Build enhanced context from event details
+        $context = [
+            'title' => $event->title,
+            'description' => $event->description,
+            'start_date' => $event->start_at->format('F j, Y'),
+            'start_time' => $event->start_at->format('g:i A'),
+            'venue' => $event->venue?->name,
+            'status' => $event->status,
+            'ai_model' => $aiModel,
+            'tone' => $captionTone,
+        ];
+
+        // Generate caption based on AI model and tone
+        $basePrompt = match($aiModel) {
+            'gpt4' => $this->getGPT4Prompt($postType, $captionTone, $event),
+            'claude' => $this->getClaudePrompt($postType, $captionTone, $event),
+            'gemini' => $this->getGeminiPrompt($postType, $captionTone, $event),
+            default => $this->getGPT4Prompt($postType, $captionTone, $event),
+        };
+
+        $prompt = $customPrompt ?: $basePrompt;
+        
+        // Use AI service to generate caption
+        $caption = $this->aiService->generateCaption($prompt, $context);
+        
+        // Add AI model signature
+        $signature = match($aiModel) {
+            'gpt4' => "\n\n🤖 Generated with GPT-4",
+            'claude' => "\n\n🎭 Crafted by Claude",
+            'gemini' => "\n\n💎 Powered by Gemini",
+            default => '',
+        };
+        
+        return $caption . $signature;
+    }
+
+    private function generateAdvancedAIVideo(Event $event, string $postType, array $aiVideoData): ?string
+    {
+        try {
+            // Create video based on AI video data from frontend
+            $videoStyle = $aiVideoData['style'] ?? 'slideshow';
+            $addMusic = $aiVideoData['music'] ?? false;
+            $eventTitle = $aiVideoData['eventTitle'] ?? $event->title;
+            
+            // Generate video options
+            $options = [
+                'style' => $videoStyle,
+                'music' => $addMusic,
+                'duration' => 30, // 30 seconds
+                'quality' => 'high',
+                'format' => 'mp4',
+                'prompt' => $this->getVideoPrompt($event, $postType),
+                'event_title' => $eventTitle,
+            ];
+            
+            // Use AI service to generate video
+            return $this->aiService->generateVideoFromEvent($event, $options);
+        } catch (\Exception $e) {
+            \Log::error('Advanced AI Video generation failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function getGPT4Prompt(string $postType, string $tone, Event $event): string
+    {
+        $tonePrompts = [
+            'professional' => [
+                'invitation' => "Generate a professional and elegant invitation for '{$event->title}'. Focus on networking opportunities and professional growth.",
+                'announcement' => "Create a polished announcement for '{$event->title}'. Emphasize industry leadership and innovation.",
+                'highlight' => "Write a professional highlight post for '{$event->title}'. Focus on success metrics and business outcomes.",
+                'thank_you' => "Generate a formal thank you message for '{$event->title}'. Express sincere appreciation to stakeholders.",
+                'reminder' => "Create a professional reminder for '{$event->title}'. Emphasize importance and value proposition.",
+                'advertisement' => "Write a professional advertisement for '{$event->title}'. Focus on ROI and business benefits.",
+            ],
+            'casual' => [
+                'invitation' => "Write a friendly invitation for '{$event->title}'. Make it sound fun and approachable.",
+                'announcement' => "Create an exciting announcement for '{$event->title}'. Build buzz with casual, energetic language.",
+                'highlight' => "Generate a casual highlight post for '{$event->title}'. Focus on fun moments and good vibes.",
+                'thank_you' => "Write a warm thank you message for '{$event->title}'. Show genuine appreciation in a friendly way.",
+                'reminder' => "Create a casual reminder for '{$event->title}'. Keep it light and friendly.",
+                'advertisement' => "Write a fun advertisement for '{$event->title}'. Make it sound exciting and not too salesy.",
+            ],
+            'excited' => [
+                'invitation' => "Generate an EXCITING invitation for '{$event->title}'! Use high energy and enthusiastic language!",
+                'announcement' => "Create an EXPLOSIVE announcement for '{$event->title}'! Use bold language and build massive anticipation!",
+                'highlight' => "Write an AMAZING highlight post for '{$event->title}'! Use energetic language and convey incredible excitement!",
+                'thank_you' => "Generate an ENTHUSIASTIC thank you for '{$event->title}'! Show overwhelming gratitude and excitement!",
+                'reminder' => "Create an URGENT reminder for '{$event->title}'! Use high-energy language and create FOMO!",
+                'advertisement' => "Write an EXPLOSIVE advertisement for '{$event->title}'! Use marketing hype and create urgency!",
+            ],
+            'inspirational' => [
+                'invitation' => "Generate an inspirational invitation for '{$event->title}'. Focus on growth, opportunity, and transformation.",
+                'announcement' => "Create an inspiring announcement for '{$event->title}'. Emphasize positive impact and future possibilities.",
+                'highlight' => "Write an inspirational highlight post for '{$event->title}'. Focus on meaningful moments and positive change.",
+                'thank_you' => "Generate a heartfelt thank you for '{$event->title}'. Express gratitude in an inspiring way.",
+                'reminder' => "Create an inspirational reminder for '{$event->title}'. Focus on the opportunity for growth.",
+                'advertisement' => "Write an inspiring advertisement for '{$event->title}'. Focus on transformation and positive impact.",
+            ],
+            'humorous' => [
+                'invitation' => "Generate a funny invitation for '{$event->title}'. Use humor, wit, and make it entertaining.",
+                'announcement' => "Create a humorous announcement for '{$event->title}'. Use clever wordplay and funny observations.",
+                'highlight' => "Write a funny highlight post for '{$event->title}'. Focus on humorous moments and inside jokes.",
+                'thank_you' => "Generate a humorous thank you for '{$event->title}'. Show gratitude with humor and wit.",
+                'reminder' => "Create a funny reminder for '{$event->title}'. Use humor and clever wordplay.",
+                'advertisement' => "Write a humorous advertisement for '{$event->title}'. Use comedy and wit to promote.",
+            ],
+        ];
+
+        return $tonePrompts[$tone][$postType] ?? $tonePrompts['professional']['announcement'];
+    }
+
+    private function getClaudePrompt(string $postType, string $tone, Event $event): string
+    {
+        return "As Claude, generate a sophisticated and eloquent {$tone} {$postType} for '{$event->title}'. Use refined language and demonstrate advanced writing capabilities.";
+    }
+
+    private function getGeminiPrompt(string $postType, string $tone, Event $event): string
+    {
+        return "As Gemini, create an innovative and cutting-edge {$tone} {$postType} for '{$event->title}'. Blend technology and creativity. Use modern, forward-thinking language.";
     }
 }
 
