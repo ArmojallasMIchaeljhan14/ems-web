@@ -68,8 +68,9 @@
                             @if($media->type === 'image')
                                 <img src="{{ Storage::url($media->path) }}" alt="Post image" class="w-full h-48 object-cover rounded-lg">
                             @elseif($media->type === 'video')
-                                <video controls class="w-full h-48 object-cover rounded-lg">
+                                <video controls class="w-full h-48 object-cover rounded-lg" autoplay muted loop playsinline>
                                     <source src="{{ Storage::url($media->path) }}" type="video/mp4">
+                                    Your browser does not support the video tag.
                                 </video>
                             @endif
                         @endforeach

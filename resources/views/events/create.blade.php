@@ -76,16 +76,136 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                             {{-- Title --}}
-                            <div>
+                            <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Title <span class="text-red-500">*</span>
+                                    Event Title <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text"
-                                       name="title"
-                                       value="{{ old('title') }}"
-                                       class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                       placeholder="e.g., Annual General Assembly"
-                                       required>
+                                
+                                <!-- Smart Title Input with Suggestions -->
+                                <div class="relative" x-data="{ 
+                                    showSuggestions: false,
+                                    suggestions: [
+                                        'Annual General Assembly',
+                                        'Faculty Meeting',
+                                        'Student Council Meeting',
+                                        'Parent-Teacher Conference',
+                                        'School Foundation Day',
+                                        'Graduation Ceremony',
+                                        'Recognition Day',
+                                        'Sports Fest',
+                                        'Intramurals',
+                                        'Science Fair',
+                                        'Math Quiz Bee',
+                                        'English Spelling Bee',
+                                        'Art Exhibit',
+                                        'Music Concert',
+                                        'Drama Presentation',
+                                        'Career Guidance Seminar',
+                                        'Leadership Training',
+                                        'First Aid Training',
+                                        'Fire Drill',
+                                        'Earthquake Drill',
+                                        'Enrollment Period',
+                                        'Orientation Program',
+                                        'Welcome Program',
+                                        'Farewell Program',
+                                        'Christmas Program',
+                                        'Foundation Day Celebration',
+                                        'Teachers Day Celebration',
+                                        'Nutrition Month Celebration',
+                                        'Buwan ng Wika Celebration',
+                                        'United Nations Celebration',
+                                        'World Teachers Day',
+                                        'National Heroes Day',
+                                        'Bonifacio Day',
+                                        'Rizal Day Program',
+                                        'Board Meeting',
+                                        'Department Meeting',
+                                        'PTA Meeting',
+                                        'Class Officers Meeting',
+                                        'Club Meeting',
+                                        'Seminar Workshop',
+                                        'Training Session',
+                                        'Team Building Activity',
+                                        ' Outreach Program',
+                                        'Medical Mission',
+                                        'Clean-up Drive',
+                                        'Tree Planting Activity',
+                                        'Blood Donation Drive',
+                                        'Vaccination Program',
+                                        'Health Awareness Seminar',
+                                        'Anti-Bullying Campaign',
+                                        'Drug Prevention Seminar',
+                                        'Environmental Awareness',
+                                        'Recycling Program',
+                                        'Energy Conservation Campaign'
+                                    ],
+                                    filteredSuggestions() {
+                                        const query = this.$refs.titleInput?.value.toLowerCase() || '';
+                                        if (!query) return this.suggestions.slice(0, 8);
+                                        return this.suggestions.filter(s => 
+                                            s.toLowerCase().includes(query)
+                                        ).slice(0, 8);
+                                    },
+                                    selectSuggestion(suggestion) {
+                                        this.$refs.titleInput.value = suggestion;
+                                        this.showSuggestions = false;
+                                        this.$refs.titleInput.focus();
+                                    }
+                                }">
+                                    <input type="text"
+                                           x-ref="titleInput"
+                                           name="title"
+                                           value="{{ old('title') }}"
+                                           class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 pr-10"
+                                           placeholder="Start typing or choose from suggestions..."
+                                           @focus="showSuggestions = true"
+                                           @blur="setTimeout(() => showSuggestions = false, 200)"
+                                           @input="showSuggestions = true"
+                                           required>
+                                    
+                                    <!-- Dropdown Icon -->
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </div>
+                                    
+                                    <!-- Suggestions Dropdown -->
+                                    <div x-show="showSuggestions && filteredSuggestions().length > 0"
+                                         x-transition:enter="transition ease-out duration-200"
+                                         x-transition:enter-start="opacity-0 transform scale-95"
+                                         x-transition:enter-end="opacity-100 transform scale-100"
+                                         x-transition:leave="transition ease-in duration-75"
+                                         x-transition:leave-start="opacity-100 transform scale-100"
+                                         x-transition:leave-end="opacity-0 transform scale-95"
+                                         class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                        <div class="py-1">
+                                            <template x-for="suggestion in filteredSuggestions()" :key="suggestion">
+                                                <button type="button"
+                                                        @click="selectSuggestion(suggestion)"
+                                                        @mousedown.prevent
+                                                        class="w-full px-4 py-2 text-left text-sm hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none border-b border-gray-100 last:border-b-0">
+                                                    <div class="flex items-center justify-between">
+                                                        <span x-text="suggestion"></span>
+                                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                                        </svg>
+                                                    </div>
+                                                </button>
+                                            </template>
+                                        </div>
+                                        <div class="px-4 py-2 bg-gray-50 border-t border-gray-200">
+                                            <p class="text-xs text-gray-500">
+                                                💡 <span x-text="filteredSuggestions().length"></span> suggestions available • Type to filter
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <p class="mt-1 text-xs text-gray-500">
+                                    💡 Choose from common school events or type a custom title
+                                </p>
                             </div>
 
                             {{-- Venue --}}

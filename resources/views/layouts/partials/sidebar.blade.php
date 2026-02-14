@@ -39,14 +39,14 @@
             </a>
 
             <div
-                data-menu-label="event management events program flow event check-in participants"
+                data-menu-label="event management events program flow event check-in participants attendance"
                 class="menu-search-item rounded-xl bg-gray-100 p-1.5"
-                x-data="{ eventOpen: {{ (request()->routeIs('events.*') || request()->routeIs('program-flow.*') || request()->routeIs('checkin.*') || request()->routeIs('admin.participants.*') || request()->routeIs('admin.events.participants.*')) ? 'true' : 'false' }} }"
+                x-data="{ eventOpen: {{ (request()->routeIs('events.*') || request()->routeIs('program-flow.*') || request()->routeIs('checkin.*') || request()->routeIs('admin.participants.*') || request()->routeIs('admin.events.participants.*') || request()->routeIs('admin.attendance.*')) ? 'true' : 'false' }} }"
             >
                 <button
                     type="button"
                     @click="eventOpen = !eventOpen"
-                    class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium {{ (request()->routeIs('events.*') || request()->routeIs('program-flow.*') || request()->routeIs('checkin.*') || request()->routeIs('admin.participants.*') || request()->routeIs('admin.events.participants.*')) ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-800 hover:bg-gray-200' }}"
+                    class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium {{ (request()->routeIs('events.*') || request()->routeIs('program-flow.*') || request()->routeIs('checkin.*') || request()->routeIs('admin.participants.*') || request()->routeIs('admin.events.participants.*') || request()->routeIs('admin.attendance.*')) ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-800 hover:bg-gray-200' }}"
                 >
                     <span class="flex items-center gap-3">
                         <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -73,6 +73,11 @@
                             <a href="{{ route('admin.participants.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ (request()->routeIs('admin.participants.*') || request()->routeIs('admin.events.participants.*')) ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">
                                 Participants
                             </a>
+                            @can('manage participants')
+                                <a href="{{ route('admin.attendance.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('admin.attendance.*') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">
+                                    Attendance
+                                </a>
+                            @endcan
                         @endrole
                     </div>
                 </div>

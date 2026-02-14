@@ -12,6 +12,7 @@ use App\Http\Controllers\ProgramFlowController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SupportController;
 
+use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\ParticipantController;
 use App\Http\Controllers\Admin\ReportController;
@@ -183,7 +184,24 @@ Route::middleware(['auth', 'role:admin'])
         // General participants list (Only for index/listing, avoiding create/store conflict)
         Route::get('/participants', [ParticipantController::class, 'index'])->name('participants.index');
 
-        Route::resource('documents', DocumentController::class)->only(['index']);
+        // Attendance Monitoring
+        Route::prefix('attendance')
+            ->name('attendance.')
+            ->middleware('permission:manage participants')
+            ->group(function () {
+                Route::get('/', [AttendanceController::class, 'index'])->name('index');
+                Route::get('/events/{event}', [AttendanceController::class, 'show'])->name('show');
+                Route::post('/events/{event}/check-in', [AttendanceController::class, 'checkIn'])->name('check-in');
+                Route::post('/events/{event}/check-out', [AttendanceController::class, 'checkOut'])->name('check-out');
+                Route::post('/events/{event}/verify', [AttendanceController::class, 'verify'])->name('verify');
+                Route::post('/events/{event}/bulk-check-in', [AttendanceController::class, 'bulkCheckIn'])->name('bulk-check-in');
+                Route::post('/events/{event}/bulk-check-out', [AttendanceController::class, 'bulkCheckOut'])->name('bulk-check-out');
+                Route::get('/events/{event}/export', [AttendanceController::class, 'export'])->name('export');
+            });
+
+        Route::resource('documents', DocumentController::class);
+        Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
+        Route::post('/events/{event}/generate-attendance-report', [DocumentController::class, 'generateAttendanceReport'])->name('documents.generate-attendance-report');
         Route::resource('users', UserController::class)->except(['show']);
 
         // Roles & Permissions

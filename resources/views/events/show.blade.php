@@ -320,6 +320,134 @@
             </div>
         </div>
 
+        {{-- ================= DOCUMENTS SECTION ================= --}}
+        <div class="bg-white border rounded-lg p-6 shadow">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    Event Documents
+                </h3>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('admin.documents.create') }}?event_id={{ $event->id }}" 
+                       class="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                        ➕ Upload Document
+                    </a>
+                    <a href="{{ route('admin.documents.index') }}?event_id={{ $event->id }}" 
+                       class="px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                        View All
+                    </a>
+                </div>
+            </div>
+
+            @php
+                $eventDocuments = \App\Models\Document::where('event_id', $event->id)
+                    ->with('user')
+                    ->orderByDesc('created_at')
+                    ->limit(5)
+                    ->get();
+            @endphp
+
+            @if($eventDocuments->count() > 0)
+                <div class="space-y-3">
+                    @foreach($eventDocuments as $document)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <!-- Document Icon -->
+                                <div class="p-2 bg-white rounded-lg border">
+                                    @switch($document->type)
+                                        @case('attendance')
+                                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            @break
+                                        @case('event')
+                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            @break
+                                        @case('policy')
+                                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            @break
+                                        @case('report')
+                                            <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            @break
+                                        @default
+                                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                            </svg>
+                                    @endswitch
+                                </div>
+
+                                <!-- Document Info -->
+                                <div>
+                                    <a href="{{ route('admin.documents.show', $document) }}" 
+                                       class="font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                                        {{ $document->title }}
+                                    </a>
+                                    <div class="flex items-center space-x-2 text-xs text-gray-500 mt-1">
+                                        <span>{{ $document->formatted_file_size }}</span>
+                                        <span>•</span>
+                                        <span>{{ $document->created_at->diffForHumans() }}</span>
+                                        @if($document->user)
+                                            <span>•</span>
+                                            <span>{{ $document->user->name }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex items-center space-x-2">
+                                @if($document->is_attendance_document)
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
+                                        Attendance Report
+                                    </span>
+                                @endif
+                                <a href="{{ route('admin.documents.download', $document) }}" 
+                                   class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                                   title="Download">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                @if($eventDocuments->count() >= 5)
+                    <div class="mt-4 text-center">
+                        <a href="{{ route('admin.documents.index') }}?event_id={{ $event->id }}" 
+                           class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                            View all documents →
+                        </a>
+                    </div>
+                @endif
+            @else
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No documents yet</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Upload documents related to this event such as presentations, reports, or attendance records.
+                    </p>
+                    <div class="mt-4">
+                        <a href="{{ route('admin.documents.create') }}?event_id={{ $event->id }}" 
+                           class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                            ➕ Upload First Document
+                        </a>
+                    </div>
+                </div>
+            @endif
+        </div>
+
         {{-- ================= APPROVAL STATUS & ACTIONS ================= --}}
         <div class="bg-white border rounded-lg p-6 shadow">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">

@@ -1,172 +1,304 @@
 <x-app-layout>
     <div class="space-y-6">
-        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <!-- Header Section -->
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Documents</h2>
-                    <p class="mt-1 text-sm text-gray-500">Prioritized work queue for document operations.</p>
+                    <h2 class="text-xl font-semibold text-gray-900">Documentation Center</h2>
+                    <p class="mt-1 text-sm text-gray-500">Manage and organize all your documents in one place.</p>
                 </div>
-                <div class="text-right">
-                    <p class="text-xs uppercase tracking-wide text-gray-500">Needs attention</p>
-                    <p class="mt-1 text-2xl font-semibold text-gray-900">{{ $pendingReviewCount + $expiringSoonCount }}</p>
-                </div>
-            </div>
-
-            <div class="mt-5">
-                <label for="documents-search" class="sr-only">Search Documents Menu</label>
-                <div class="relative">
-                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    </span>
-                    <input id="documents-search" type="text" data-documents-search-input placeholder="Search actions and sections..." class="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-700 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200">
-                </div>
-            </div>
-
-            <div class="mt-5 space-y-4" data-documents-search-target>
-                <div class="md:hidden">
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Primary</p>
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                        <a href="#" data-doc-item data-doc-label="create new document" class="rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Create</a>
-                        <a href="#" data-doc-item data-doc-label="upload document" class="rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Upload</a>
-                        <a href="#recent-documents" data-doc-item data-doc-label="recent documents" class="rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Recent</a>
-                        <a href="#pending-review" data-doc-item data-doc-label="pending review" class="rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Pending</a>
-                        <a href="#all-documents" data-doc-item data-doc-label="all documents" class="rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">All</a>
-                    </div>
-                    <details class="mt-2 rounded-lg border border-gray-200 p-3">
-                        <summary class="cursor-pointer text-sm font-medium text-gray-700">More</summary>
-                        <div class="mt-2 grid grid-cols-1 gap-2 text-sm">
-                            <a href="#expiring-soon" data-doc-item data-doc-label="expiring soon" class="rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50">Expiring Soon</a>
-                            <a href="#approved-documents" data-doc-item data-doc-label="approved documents" class="rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50">Approved</a>
-                            <a href="#rejected-documents" data-doc-item data-doc-label="rejected needs fix" class="rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50">Rejected / Needs Fix</a>
-                            @role('admin')
-                                <a href="#document-settings" data-doc-item data-doc-label="document settings templates" class="rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50">Settings / Templates</a>
-                            @endrole
-                        </div>
-                    </details>
-                </div>
-
-                <div class="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
-                    <button type="button" data-doc-item data-doc-label="create new document" class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-left">
-                        <p class="text-xs uppercase tracking-wide text-violet-700">Quick Action</p>
-                        <p class="mt-1 font-semibold text-violet-900">Create New Document</p>
-                    </button>
-                    <button type="button" data-doc-item data-doc-label="upload document" class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-left">
-                        <p class="text-xs uppercase tracking-wide text-violet-700">Quick Action</p>
-                        <p class="mt-1 font-semibold text-violet-900">Upload Document</p>
-                    </button>
-                    <a href="#recent-documents" data-doc-item data-doc-label="recent documents" class="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Resume Work</p>
-                        <p class="mt-1 font-semibold text-gray-900">Recent Documents</p>
-                    </a>
-                    <a href="#all-documents" data-doc-item data-doc-label="all documents" class="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Browse</p>
-                        <p class="mt-1 font-semibold text-gray-900">All Documents</p>
+                <div class="flex items-center space-x-3">
+                    <a href="{{ route('admin.documents.create') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                        ➕ Upload Document
                     </a>
                 </div>
+            </div>
 
-                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-documents-card-list>
-                    <article id="pending-review" data-doc-item data-doc-label="pending review" class="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-amber-900">Pending Review</h3>
-                            <span class="rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900">{{ $pendingReviewCount }}</span>
+            <!-- Search and Filters -->
+            <div class="mt-6 space-y-4">
+                <form method="GET" action="{{ route('admin.documents.index') }}" class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <!-- Search -->
+                        <div class="flex-1">
+                            <input type="text" 
+                                   name="search" 
+                                   value="{{ request('search') }}"
+                                   placeholder="Search documents by title, description, or tags..." 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
-                        <p class="mt-2 text-sm text-amber-800">Submitted documents waiting for admin decision.</p>
-                    </article>
-
-                    <article id="expiring-soon" data-doc-item data-doc-label="expiring soon alerts" class="rounded-xl border border-red-200 bg-red-50 p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-red-900">Expiring Soon</h3>
-                            <span class="rounded-full bg-red-200 px-2.5 py-0.5 text-xs font-semibold text-red-900">{{ $expiringSoonCount }}</span>
+                        
+                        <!-- Type Filter -->
+                        <div class="sm:w-48">
+                            <select name="type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">All Types</option>
+                                @foreach($types as $value => $label)
+                                    <option value="{{ $value }}" {{ request('type') == $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <p class="mt-2 text-sm text-red-800">Requests due in 14 days without submissions.</p>
-                    </article>
-
-                    <article id="approved-documents" data-doc-item data-doc-label="approved documents" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-emerald-900">Approved Documents</h3>
-                            <span class="rounded-full bg-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-900">{{ $approvedCount }}</span>
+                        
+                        <!-- Event Filter -->
+                        <div class="sm:w-48">
+                            <select name="event_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">All Events</option>
+                                @foreach($events as $id => $title)
+                                    <option value="{{ $id }}" {{ request('event_id') == $id ? 'selected' : '' }}>
+                                        {{ Str::limit($title, 30) }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <p class="mt-2 text-sm text-emerald-800">Ready to use. Approval workflow can be connected next.</p>
-                    </article>
-
-                    <article id="rejected-documents" data-doc-item data-doc-label="rejected needs fix" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-rose-900">Rejected / Needs Fix</h3>
-                            <span class="rounded-full bg-rose-200 px-2.5 py-0.5 text-xs font-semibold text-rose-900">{{ $rejectedCount }}</span>
+                        
+                        <!-- Category Filter -->
+                        <div class="sm:w-48">
+                            <select name="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">All Categories</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>
+                                        {{ $category }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <p class="mt-2 text-sm text-rose-800">Track documents requiring correction and resubmission.</p>
-                    </article>
+                        
+                        <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                            🔍 Search
+                        </button>
+                        
+                        @if(request()->hasAny(['search', 'type', 'event_id', 'category']))
+                            <a href="{{ route('admin.documents.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                                ✖️ Clear
+                            </a>
+                        @endif
+                    </div>
+                </form>
+            </div>
+        </div>
 
-                    <article id="all-documents" data-doc-item data-doc-label="all documents" class="rounded-xl border border-gray-200 bg-white p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-900">All Documents</h3>
-                            <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">{{ $totalRequests }}</span>
+        <!-- Documents Grid -->
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            @forelse($documents as $document)
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <!-- Document Icon/Header -->
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center space-x-2">
+                            @switch($document->type)
+                                @case('attendance')
+                                    <span class="p-2 bg-green-100 rounded-lg">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                    @break
+                                @case('event')
+                                    <span class="p-2 bg-blue-100 rounded-lg">
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </span>
+                                    @break
+                                @case('policy')
+                                    <span class="p-2 bg-purple-100 rounded-lg">
+                                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </span>
+                                    @break
+                                @case('report')
+                                    <span class="p-2 bg-orange-100 rounded-lg">
+                                        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </span>
+                                    @break
+                                @default
+                                    <span class="p-2 bg-gray-100 rounded-lg">
+                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                        </svg>
+                                    </span>
+                            @endswitch
+                            
+                            @if($document->is_public)
+                                <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
+                                    Public
+                                </span>
+                            @endif
                         </div>
-                        <p class="mt-2 text-sm text-gray-600">Full list of requests across statuses.</p>
-                    </article>
+                        
+                        <!-- Actions Dropdown -->
+                        <div class="relative">
+                            <button onclick="toggleDropdown('dropdown-{{ $document->id }}')" class="p-1 text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                </svg>
+                            </button>
+                            
+                            <div id="dropdown-{{ $document->id }}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                                <div class="py-1">
+                                    <a href="{{ route('admin.documents.show', $document) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        👁️ View Details
+                                    </a>
+                                    <a href="{{ route('admin.documents.download', $document) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        ⬇️ Download
+                                    </a>
+                                    @if($document->canBeDeletedBy(auth()->user()))
+                                        <a href="{{ route('admin.documents.edit', $document) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            ✏️ Edit
+                                        </a>
+                                        <form action="{{ route('admin.documents.destroy', $document) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this document?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                                🗑️ Delete
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    @role('admin')
-                        <article id="document-settings" data-doc-item data-doc-label="document settings templates" class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-                            <h3 class="font-semibold text-indigo-900">Document Settings / Templates</h3>
-                            <p class="mt-2 text-sm text-indigo-800">Admin-only controls for templates and future workflow rules.</p>
-                        </article>
-                    @else
-                        <article data-doc-item data-doc-label="my documents only" class="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                            <h3 class="font-semibold text-blue-900">My Documents Scope</h3>
-                            <p class="mt-2 text-sm text-blue-800">Staff users only see their own submissions and actions.</p>
-                        </article>
-                    @endrole
+                    <!-- Document Title -->
+                    <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">
+                        <a href="{{ route('admin.documents.show', $document) }}" class="hover:text-indigo-600">
+                            {{ $document->title }}
+                        </a>
+                    </h3>
+
+                    <!-- Document Description -->
+                    @if($document->description)
+                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">
+                            {{ $document->description }}
+                        </p>
+                    @endif
+
+                    <!-- Metadata -->
+                    <div class="space-y-2 text-xs text-gray-500">
+                        <!-- Type and Category -->
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800">
+                                {{ $types[$document->type] ?? $document->type }}
+                            </span>
+                            @if($document->category)
+                                <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ $document->category }}
+                                </span>
+                            @endif
+                        </div>
+
+                        <!-- Event Link -->
+                        @if($document->event)
+                            <div class="flex items-center space-x-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <a href="{{ route('events.show', $document->event) }}" class="hover:text-indigo-600">
+                                    {{ Str::limit($document->event->title, 25) }}
+                                </a>
+                            </div>
+                        @endif
+
+                        <!-- File Info -->
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center space-x-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                <span>{{ $document->formatted_file_size }}</span>
+                            </span>
+                            <span>{{ $document->created_at->diffForHumans() }}</span>
+                        </div>
+
+                        <!-- Tags -->
+                        @if($document->tags)
+                            <div class="flex flex-wrap gap-1">
+                                @foreach($document->tags_array as $tag)
+                                    <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">
+                                        #{{ $tag }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Attendance Report Badge -->
+                    @if($document->is_attendance_document)
+                        <div class="mt-3 p-2 bg-green-50 rounded-lg border border-green-200">
+                            <div class="flex items-center space-x-1 text-xs text-green-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>Attendance Report</span>
+                            </div>
+                            @if($document->attendance_data && isset($document->attendance_data['statistics']))
+                                <div class="mt-1 text-xs text-green-600">
+                                    {{ $document->attendance_data['statistics']['checked_in_count'] ?? 0 }} / {{ $document->attendance_data['statistics']['total_participants'] ?? 0 }} checked in
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
-
-                <div id="recent-documents" data-doc-item data-doc-label="recent documents" class="rounded-xl border border-gray-200 bg-white p-4">
-                    <h3 class="font-semibold text-gray-900">Recent Documents</h3>
-                    <p class="mt-1 text-sm text-gray-500">Last 5 submitted files.</p>
-
-                    <div class="mt-3 overflow-hidden rounded-lg border border-gray-100">
-                        <table class="min-w-full divide-y divide-gray-100 text-sm">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600">Document</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600">Submitted By</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600">Submitted At</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 bg-white">
-                                @forelse ($recentSubmissions as $submission)
-                                    <tr>
-                                        <td class="px-3 py-2 text-gray-800">{{ $submission->documentRequest?->title ?? 'Untitled request' }}</td>
-                                        <td class="px-3 py-2 text-gray-700">{{ $submission->user?->name ?? 'Unknown user' }}</td>
-                                        <td class="px-3 py-2 text-gray-600">{{ optional($submission->submitted_at)->format('M d, Y h:i A') ?? 'N/A' }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="px-3 py-6 text-center text-sm text-gray-500">No recent submissions yet.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+            @empty
+                <div class="col-span-full">
+                    <div class="text-center py-12">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No documents found</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            @if(request()->hasAny(['search', 'type', 'event_id', 'category']))
+                                Try adjusting your search criteria or 
+                                <a href="{{ route('admin.documents.index') }}" class="text-indigo-600 hover:text-indigo-500">clear all filters</a>.
+                            @else
+                                Get started by uploading your first document.
+                            @endif
+                        </p>
+                        @if(!request()->hasAny(['search', 'type', 'event_id', 'category']))
+                            <div class="mt-6">
+                                <a href="{{ route('admin.documents.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                                    ➕ Upload Document
+                                </a>
+                            </div>
+                        @endif
                     </div>
                 </div>
+            @endforelse
+        </div>
+
+        <!-- Pagination -->
+        @if($documents->hasPages())
+            <div class="flex justify-center">
+                {{ $documents->links() }}
             </div>
-        </section>
+        @endif
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const input = document.querySelector('[data-documents-search-input]');
-            const items = document.querySelectorAll('[data-doc-item]');
-            if (!input || items.length === 0) {
-                return;
-            }
-
-            input.addEventListener('input', function (event) {
-                const query = String(event.target.value || '').trim().toLowerCase();
-                items.forEach(function (item) {
-                    const label = String(item.getAttribute('data-doc-label') || '').toLowerCase();
-                    const visible = query.length === 0 || label.includes(query);
-                    item.style.display = visible ? '' : 'none';
-                });
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
+            
+            // Close all other dropdowns
+            allDropdowns.forEach(d => {
+                if (d.id !== id) {
+                    d.classList.add('hidden');
+                }
             });
+            
+            // Toggle current dropdown
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.relative')) {
+                document.querySelectorAll('[id^="dropdown-"]').forEach(dropdown => {
+                    dropdown.classList.add('hidden');
+                });
+            }
         });
     </script>
 </x-app-layout>

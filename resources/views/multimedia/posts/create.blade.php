@@ -284,6 +284,13 @@
                             Generate AI caption based on event details and media
                         </label>
                     </div>
+                    
+                    <div class="flex items-center mt-2">
+                        <input type="checkbox" name="generate_ai_video" id="generate_ai_video" value="1" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <label for="generate_ai_video" class="ml-2 text-sm text-gray-700">
+                            🎬 Generate AI short video (15-30 seconds)
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -324,7 +331,7 @@
                 <a href="{{ route('multimedia.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                <button type="submit" onclick="handleSubmit(event)" class="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                     Create Post
                 </button>
             </div>
@@ -409,6 +416,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const filePreview = document.getElementById('file-preview');
     const fileList = document.getElementById('file-list');
     const mediaOptions = document.getElementById('media-options');
+    const aiVideoCheckbox = document.getElementById('generate_ai_video');
+    
+    // Add AI video checkbox listener
+    if (aiVideoCheckbox) {
+        aiVideoCheckbox.addEventListener('change', generateAIVideo);
+    }
     
     if (mediaUpload) {
         mediaUpload.addEventListener('change', function(e) {
@@ -525,18 +538,18 @@ function generateAICaption() {
             ],
             thank_you: [
                 `🙏 Our hearts are overflowing with gratitude! To everyone who made ${eventTitle} a massive success - our amazing participants, dedicated organizers, and incredible supporters - YOU are the real MVPs! Thank you for everything! #ThankYou #EventSuccess`,
-                `💝 overwhelmed with appreciation! ${eventTitle} was nothing short of magical, and that's all because of YOU! To our attendees, volunteers, and team - thank you for making dreams come true! #Grateful #CommunityLove`,
+                `💝 Overwhelmed with appreciation! ${eventTitle} was nothing short of magical, and that's all because of YOU! To our attendees, volunteers, and team - thank you for making dreams come true! #Grateful #CommunityLove`,
                 `🌟 Thank you, thank you, THANK YOU! ${eventTitle} exceeded all expectations because of the incredible community that came together. We're still smiling from all the amazing moments! #Appreciation #EventFamily`
             ],
             reminder: [
                 `⏰ Friendly reminder! ${eventTitle} is just around the corner and we couldn't be more excited! Make sure you're all set for what promises to be an absolutely amazing experience. We can't wait to see you there! #EventReminder #GetReady`,
                 `🔔 Quick reminder! ${eventTitle} is happening soon! Don't miss out on what's going to be an incredible day of fun, learning, and connection. Get ready to make some amazing memories! #DontForget #EventAlert`,
-                `⚡ Time is flying! ${eventTitle} is almost here! Have you got your plans ready? This is going to be HUGE and we want to see you there! #FinalCountdown #EventReminder`
+                `⏰ Hey! ${eventTitle} is coming up faster than we think! Time to get excited and prepared for what's going to be an absolutely fantastic event. See you there! #Reminder #EventVibes`
             ],
             advertisement: [
-                `🎬 Get ready for something EXTRAORDINARY! ${eventTitle} is not just another event - it's a game-changing experience that will blow your mind! Join us and be part of something truly revolutionary! #MustAttend #GameChanger`,
-                `🚀 This is it! ${eventTitle} is THE event you've been waiting for! Prepare for mind-blowing experiences, incredible connections, and memories that will last forever. Don't just attend - EXPERIENCE it! #EpicEvent #DontMissOut`,
-                `🌟 Why settle for ordinary when you can have extraordinary? ${eventTitle} is redefining what events can be! Join us for a mind-blowing experience that will leave you speechless! #NextLevel #EventRevolution`
+                `🎬 Get ready for ${eventTitle}! This is more than just an event - it's an experience you don't want to miss. Join us on ${eventDate} and be part of something extraordinary! #Advertisement #DontMissOut`,
+                `🎥 Lights, camera, ACTION! ${eventTitle} is coming and it's going to be absolutely incredible! This is your chance to be part of something truly special. Mark your calendars! #EventPromotion #MustAttend`,
+                `� Short video created from uploaded content! Get ready to experience ${eventTitle} like never before. This is more than just an event - it's going to be absolutely legendary! #VideoContent #EventHype`
             ]
         };
         
@@ -547,26 +560,3 @@ function generateAICaption() {
         // Add custom AI prompt if provided
         if (aiPrompt.trim()) {
             aiCaption += `\n\n💭 ${aiPrompt}`;
-        }
-        
-        // Add media processing info if files are uploaded
-        const mediaProcessing = document.querySelector('input[name="media_processing"]:checked');
-        if (mediaProcessing && document.getElementById('file-preview').classList.contains('hidden') === false) {
-            const processingType = mediaProcessing.value;
-            const processingMessages = {
-                enhance: '🎨 Media enhanced with AI for maximum impact!',
-                advertisement: '📢 Promotional content generated from uploaded media!',
-                video: '🎬 Short video created from uploaded content!',
-                original: '📸 Original media preserved in all its glory!'
-            };
-            aiCaption += `\n\n${processingMessages[processingType] || processingMessages.original}`;
-        }
-        
-        captionTextarea.value = aiCaption;
-        charCount.textContent = aiCaption.length;
-        
-        button.textContent = originalText;
-        button.disabled = false;
-    }, 1500);
-}
-</script>
