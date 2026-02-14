@@ -295,4 +295,6 @@ Route::get('/api/docs', function () {
     return redirect('/API_DOCUMENTATION.md');
 })->name('api.docs');
 
+Route::get('/api/url', [App\Http\Controllers\ApiUrlController::class, 'getApiUrl'])->name('api.url');
+
 require __DIR__ . '/auth.php';

@@ -150,7 +150,7 @@
                         </div>
                         <pre id="code-example" class="text-sm text-gray-300 overflow-x-auto"><code>// Fetch events using JavaScript
 const fetchEvents = async () => {
-  const response = await fetch("http://ems-web.test/api/events", {
+  const response = await fetch("{{ url('/api/events') }}", {
     method: "GET",
     headers: {
       "Authorization": "Bearer YOUR_TOKEN_HERE",
@@ -165,7 +165,7 @@ const fetchEvents = async () => {
 
 // Create a new event
 const createEvent = async (eventData) => {
-  const response = await fetch("http://ems-web.test/api/events", {
+  const response = await fetch("{{ url('/api/events') }}", {
     method: "POST",
     headers: {
       "Authorization": "Bearer YOUR_TOKEN_HERE",
@@ -367,7 +367,7 @@ const createEvent = async (eventData) => {
         const codeExamples = {
             javascript: `// Fetch events using JavaScript
 const fetchEvents = async () => {
-  const response = await fetch("http://ems-web.test/api/events", {
+  const response = await fetch("{{ url('/api/events') }}", {
     method: "GET",
     headers: {
       "Authorization": "Bearer YOUR_TOKEN_HERE",
@@ -382,7 +382,7 @@ const fetchEvents = async () => {
 
 // Create a new event
 const createEvent = async (eventData) => {
-  const response = await fetch("http://ems-web.test/api/events", {
+  const response = await fetch("{{ url('/api/events') }}", {
     method: "POST",
     headers: {
       "Authorization": "Bearer YOUR_TOKEN_HERE",
@@ -405,7 +405,7 @@ const createEvent = async (eventData) => {
 use GuzzleHttp\\Client;
 
 $client = new Client();
-$response = $client->get("http://ems-web.test/api/events", [
+$response = $client->get("{{ url('/api/events') }}", [
     "headers" => [
         "Authorization" => "Bearer YOUR_TOKEN_HERE",
         "Content-Type" => "application/json"
@@ -416,7 +416,7 @@ $events = json_decode($response->getBody(), true);
 print_r($events);
 
 // Create a new event
-$response = $client->post("http://ems-web.test/api/events", [
+$response = $client->post("{{ url('/api/events') }}", [
     "headers" => [
         "Authorization" => "Bearer YOUR_TOKEN_HERE",
         "Content-Type" => "application/json"
@@ -442,7 +442,7 @@ def fetch_events():
         "Content-Type": "application/json"
     }
     
-    response = requests.get("http://ems-web.test/api/events", headers=headers)
+    response = requests.get("{{ url('/api/events') }}", headers=headers)
     events = response.json()
     print(events)
     return events
@@ -464,7 +464,7 @@ def create_event():
     }
     
     response = requests.post(
-        "http://ems-web.test/api/events", 
+        "{{ url('/api/events') }}", 
         headers=headers, 
         json=data
     )
@@ -522,7 +522,7 @@ def create_event():
             const data = Object.fromEntries(formData);
             
             try {
-                const response = await fetch('/api/integration/register', {
+                const response = await fetch('{{ url("/api/integration/register") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -550,7 +550,7 @@ def create_event():
             const data = Object.fromEntries(formData);
             
             try {
-                const response = await fetch('/api/integration/token', {
+                const response = await fetch('{{ url("/api/integration/token") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
