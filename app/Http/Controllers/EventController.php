@@ -133,7 +133,7 @@ class EventController extends Controller
                     'venue_id' => $request->venue_id,
                     'number_of_participants' => $request->number_of_participants ?? 0,
                     'requested_by' => Auth::id(),
-                    'status' => 'pending_approvals',
+                    'status' => Event::STATUS_PENDING_APPROVAL,
                 ]);
 
                 // ================= VENUE BOOKINGS =================
@@ -694,7 +694,7 @@ class EventController extends Controller
                 'end_at' => $end,
                 'description' => $description,
                 'venue_id' => $venueId,
-                'status' => 'pending_approval',
+                'status' => Event::STATUS_PENDING_APPROVAL,
                 'requested_by' => Auth::id(),
             ]);
 

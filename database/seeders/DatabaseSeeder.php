@@ -37,10 +37,13 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call(RoleAndPermissionSeeder::class);
+        $this->call(GrantReportPermissionsSeeder::class);
 
-         $this->call([
+        $this->call([
             CampusFacilitySeeder::class,
+            SchoolSystemSeeder::class,
             MasterDataSeeder::class,
+            CoreProcessSeeder::class,
         ]);
     }
 

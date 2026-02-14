@@ -26,7 +26,7 @@ class ParticipantController extends Controller
         // If an event was provided (route: admin.events.participants.index), show full event details
         if ($event) {
             // ensure event is visible to non-admin owners
-            if (!$isAdmin && $event->user_id !== $user->id) {
+            if (!$isAdmin && $event->requested_by !== $user->id) {
                 abort(403);
             }
 
@@ -55,7 +55,7 @@ class ParticipantController extends Controller
         $events = Event::query()
             ->with(['participants.user.roles', 'participants.employee'])
             ->when(!$isAdmin, fn ($q) =>
-                $q->where('user_id', $user->id)
+                $q->where('requested_by', $user->id)
             )
             // Only show published events on the participants index
             ->where('status', 'published')
@@ -65,7 +65,7 @@ class ParticipantController extends Controller
         $statsQuery = Participant::query()
             ->when(!$isAdmin, fn ($q) =>
                 $q->whereHas('event', fn ($e) =>
-                    $e->where('user_id', $user->id)
+                    $e->where('requested_by', $user->id)
                 )
             );
 
@@ -156,7 +156,7 @@ class ParticipantController extends Controller
     {
         abort_if($participant->event_id !== $event->id, 404);
 
-        if (!auth()->user()->isAdmin() && $event->user_id !== auth()->id()) {
+        if (!auth()->user()->isAdmin() && $event->requested_by !== auth()->id()) {
             abort(403);
         }
 

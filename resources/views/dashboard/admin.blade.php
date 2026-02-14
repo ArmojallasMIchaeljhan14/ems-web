@@ -184,7 +184,7 @@
                             Approvals
                         </a>
                         
-                        <a href="{{ route('admin.reports.index') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        <a href="{{ route('reports.index') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v6m12 0H6" />
                             </svg>
@@ -193,6 +193,66 @@
                     </div>
                 </div>
             </div>
+
+            <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div class="bg-white shadow rounded-lg border border-gray-200">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Event Status Distribution</h3>
+                        <div class="mt-4 h-72">
+                            <canvas id="eventStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow rounded-lg border border-gray-200">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Events Trend (Last 6 Months)</h3>
+                        <div class="mt-4 h-72">
+                            <canvas id="eventsTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const statusChart = @json($statusChart ?? []);
+        const eventsByMonth = @json($eventsByMonth ?? []);
+
+        new Chart(document.getElementById('eventStatusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: statusChart.map(item => item.label),
+                datasets: [{
+                    data: statusChart.map(item => item.value),
+                    backgroundColor: ['#7c3aed', '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#6b7280']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        new Chart(document.getElementById('eventsTrendChart'), {
+            type: 'line',
+            data: {
+                labels: eventsByMonth.map(item => item.label),
+                datasets: [{
+                    label: 'Events',
+                    data: eventsByMonth.map(item => item.value),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                    fill: true,
+                    tension: 0.35
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    </script>
 </x-app-layout>

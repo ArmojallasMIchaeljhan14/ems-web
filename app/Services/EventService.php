@@ -18,7 +18,7 @@ class EventService
 
     public function getPendingEvents()
     {
-        return Event::where('status', 'pending_approval')
+        return Event::where('status', Event::STATUS_PENDING_APPROVAL)
             ->with('requestedBy')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -324,7 +324,7 @@ class EventService
     private function formatEventsForCalendar($events)
     {
         $colors = [
-            'pending_approval' => '#f39c12', // Orange
+            Event::STATUS_PENDING_APPROVAL => '#f39c12', // Orange
             'approved'         => '#00c0ef', // Aqua
             'published'        => '#00a65a', // Green
             'rejected'         => '#dd4b39', // Red

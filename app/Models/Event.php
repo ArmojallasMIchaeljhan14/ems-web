@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Event extends Model
 {
-    public const STATUS_PENDING_APPROVAL = 'pending_approval';
+    public const STATUS_PENDING_APPROVAL = 'pending_approvals';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_PUBLISHED = 'published';

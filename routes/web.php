@@ -59,7 +59,9 @@ Route::middleware('auth')->group(function () {
 
     // Media posts (general authenticated access) served by MultimediaController
     Route::get('/media/posts', [MultimediaController::class, 'posts'])->name('media.posts');
-    Route::get('/media/posts/{post}', [MultimediaController::class, 'postsShow'])->name('media.posts.show');
+    Route::get('/media/posts/{post}', [MultimediaController::class, 'postsShow'])
+        ->whereNumber('post')
+        ->name('media.posts.show');
 
     // Event ratings
     Route::post('/events/{event}/ratings', [\App\Http\Controllers\EventRatingController::class, 'store'])->name('events.ratings.store');
@@ -72,7 +74,9 @@ Route::middleware('auth')->group(function () {
         ->middleware(['permission:create posts'])->name('media.posts.store');
 
     // Deletion is authorized in controller (owner, admin, or 'manage all posts' permission)
-    Route::delete('/media/posts/{post}', [MultimediaController::class, 'postsDestroy'])->name('media.posts.destroy');
+    Route::delete('/media/posts/{post}', [MultimediaController::class, 'postsDestroy'])
+        ->whereNumber('post')
+        ->name('media.posts.destroy');
 
     // Program Flow
     Route::get('/program-flow', [ProgramFlowController::class, 'index'])->name('program-flow.index');
@@ -89,6 +93,26 @@ Route::middleware('auth')->group(function () {
 
     // Support
     Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+
+    // Shared analytics dashboard with graphs
+    Route::get('/dashboard/insights', [DashboardController::class, 'insights'])->name('dashboard.insights');
+
+    // Reports (permission-based, available to any role with view reports permission)
+    Route::middleware('permission:view reports')
+        ->prefix('reports')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::get('/pipeline', [ReportController::class, 'pipeline'])->name('pipeline');
+            Route::get('/participants', [ReportController::class, 'participants'])->name('participants');
+            Route::get('/venues', [ReportController::class, 'venues'])->name('venues');
+            Route::get('/finance', [ReportController::class, 'finance'])->name('finance');
+            Route::get('/engagement', [ReportController::class, 'engagement'])->name('engagement');
+            Route::get('/support', [ReportController::class, 'support'])->name('support');
+            Route::get('/export/{section}', [ReportController::class, 'export'])
+                ->where('section', 'overview|pipeline|participants|venues|finance|engagement|support')
+                ->name('export');
+        });
 
     // Venue availability endpoint
     Route::get('/venues/{venue}/availability', [VenueController::class, 'availability'])->name('venues.availability');
@@ -131,7 +155,6 @@ Route::middleware(['auth', 'role:admin'])
         // General participants list (Only for index/listing, avoiding create/store conflict)
         Route::get('/participants', [ParticipantController::class, 'index'])->name('participants.index');
 
-        Route::resource('reports', ReportController::class)->only(['index']);
         Route::resource('documents', DocumentController::class)->only(['index']);
         Route::resource('users', UserController::class)->except(['show']);
 

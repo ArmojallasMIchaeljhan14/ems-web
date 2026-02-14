@@ -72,7 +72,7 @@ class EventPolicy
      */
     public function approve(User $user, Event $event): bool
     {
-        return $user->isAdmin() && $event->status === 'pending_approvals';
+        return $user->isAdmin() && $event->status === Event::STATUS_PENDING_APPROVAL;
     }
 
     /**
@@ -80,7 +80,7 @@ class EventPolicy
      */
     public function reject(User $user, Event $event): bool
     {
-        return $user->isAdmin() && $event->status === 'pending_approvals';
+        return $user->isAdmin() && $event->status === Event::STATUS_PENDING_APPROVAL;
     }
 
     /**
@@ -116,6 +116,6 @@ class EventPolicy
     public function approveGate(User $user, Event $event, string $gate): bool
     {
         $validGates = ['venue', 'logistics', 'finance'];
-        return $user->isAdmin() && in_array($gate, $validGates) && $event->status === 'pending_approvals';
+        return $user->isAdmin() && in_array($gate, $validGates) && $event->status === Event::STATUS_PENDING_APPROVAL;
     }
 }

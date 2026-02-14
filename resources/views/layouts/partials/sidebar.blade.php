@@ -48,6 +48,38 @@
                 Help Support
             </a>
 
+            @can('view reports')
+            <div
+                class="rounded-xl bg-gray-100 p-1.5"
+                x-data="{ reportsOpen: {{ request()->routeIs('reports.*') ? 'true' : 'false' }} }"
+            >
+                <button
+                    type="button"
+                    @click="reportsOpen = !reportsOpen"
+                    class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium {{ request()->routeIs('reports.*') ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-800 hover:bg-gray-200' }}"
+                >
+                    <span class="flex items-center gap-3">
+                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Reports
+                    </span>
+                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': reportsOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="reportsOpen" x-transition class="mt-2 pl-3" style="display: none;">
+                    <div class="space-y-1.5 border-l-2 border-gray-300 pl-3">
+                        <a href="{{ route('reports.index') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.index') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Overview</a>
+                        <a href="{{ route('reports.pipeline') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.pipeline') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Pipeline</a>
+                        <a href="{{ route('reports.participants') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.participants') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Participants</a>
+                        <a href="{{ route('reports.venues') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.venues') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Venues</a>
+                        <a href="{{ route('reports.finance') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.finance') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Finance</a>
+                        <a href="{{ route('reports.engagement') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.engagement') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Engagement</a>
+                        <a href="{{ route('reports.support') }}" class="block rounded-lg px-3 py-2 text-sm {{ request()->routeIs('reports.support') ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-700 hover:bg-gray-200' }}">Support</a>
+                    </div>
+                </div>
+            </div>
+            @endcan
+
             @role('admin')
             <a href="{{ route('admin.venues.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {{ request()->routeIs('admin.venues.*') ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
                 <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
@@ -56,10 +88,6 @@
             <a href="{{ route('admin.participants.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {{ (request()->routeIs('admin.participants.*') || request()->routeIs('admin.events.participants.*')) ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
                 <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 Participants
-            </a>
-            <a href="{{ route('admin.reports.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {{ request()->routeIs('admin.reports.*') ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
-                <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Reports
             </a>
             <a href="{{ route('admin.documents.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {{ request()->routeIs('admin.documents.*') ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
                 <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
