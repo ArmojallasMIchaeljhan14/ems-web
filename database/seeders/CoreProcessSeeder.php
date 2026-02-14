@@ -9,9 +9,9 @@ use App\Models\EventCustodianRequest;
 use App\Models\EventFinanceRequest;
 use App\Models\EventHistory;
 use App\Models\EventLogisticsItem;
-use App\Models\Participant;
-use App\Models\Post;
+use App\Models\EventPost;
 use App\Models\PostComment;
+use App\Models\Participant;
 use App\Models\Resource;
 use App\Models\User;
 use App\Models\Venue;
@@ -175,19 +175,20 @@ class CoreProcessSeeder extends Seeder
             ['quantity' => 40, 'status' => 'approved']
         );
 
-        $post = Post::updateOrCreate(
+        $post = EventPost::updateOrCreate(
             [
                 'event_id' => $publishedEvent->id,
                 'user_id' => $mediaUser->id,
-                'type' => 'post',
+                'type' => 'announcement',
             ],
             [
-                'body' => 'Core process post: published event is now announced to all users.',
+                'caption' => 'Core process post: published event is now announced to all users.',
+                'status' => 'published',
             ]
         );
 
         PostComment::updateOrCreate(
-            ['post_id' => $post->id, 'user_id' => $requester->id],
+            ['event_post_id' => $post->id, 'user_id' => $requester->id],
             ['body' => 'Noted. This sample confirms post and comment flow.']
         );
 
