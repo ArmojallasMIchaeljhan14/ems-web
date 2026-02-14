@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventCheckInController;
 use App\Http\Controllers\MultimediaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProgramFlowController;
@@ -128,7 +129,41 @@ Route::middleware('auth')->group(function () {
 
     // Venue availability endpoint
     Route::get('/venues/{venue}/availability', [VenueController::class, 'availability'])->name('venues.availability');
+
+    // Event check-in module
+    Route::prefix('check-in')
+        ->name('checkin.')
+        ->middleware('permission:event check-in access')
+        ->group(function () {
+            Route::get('/', [EventCheckInController::class, 'index'])->name('index');
+            Route::get('/events/{event}', [EventCheckInController::class, 'show'])->name('show');
+            Route::post('/events/{event}/scan', [EventCheckInController::class, 'scan'])
+                ->middleware('permission:event check-in scan')
+                ->name('scan');
+            Route::post('/events/{event}/manual', [EventCheckInController::class, 'manual'])
+                ->middleware('permission:event check-in manual')
+                ->name('manual');
+            Route::get('/events/{event}/logs', [EventCheckInController::class, 'logs'])
+                ->middleware('permission:event check-in logs')
+                ->name('logs');
+            Route::get('/events/{event}/qr/{payload}', [EventCheckInController::class, 'qrEntry'])
+                ->middleware('permission:event check-in scan')
+                ->name('qr-entry');
+            Route::get('/events/{event}/participants/{participant}/ticket', [EventCheckInController::class, 'ticket'])
+                ->middleware('permission:event tickets print')
+                ->name('ticket');
+            Route::post('/events/{event}/participants/{participant}/ticket/resend', [EventCheckInController::class, 'resendTicket'])
+                ->middleware('permission:event tickets print')
+                ->name('ticket.resend');
+            Route::get('/events/{event}/participants/{participant}/qr/download', [EventCheckInController::class, 'downloadQr'])
+                ->middleware('permission:event tickets print')
+                ->name('qr.download');
+        });
 });
+
+Route::get('/tickets/{participant}', [EventCheckInController::class, 'publicTicket'])
+    ->middleware('signed')
+    ->name('checkin.tickets.show');
 
 
 /*

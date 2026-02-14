@@ -66,6 +66,11 @@ public function resourceAllocations(): HasMany
         return $this->hasMany(Attendance::class);
     }
 
+    public function checkinLogs(): HasMany
+    {
+        return $this->hasMany(EventCheckinLog::class);
+    }
+
     public function budget(): HasMany
     {
         return $this->hasMany(Budget::class);

@@ -7,6 +7,8 @@ use App\Models\Event;
 use App\Models\Participant;
 use App\Models\User;
 use App\Models\Employee;
+use App\Notifications\ParticipantTicketNotification;
+use App\Services\EventCheckInService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +17,10 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class ParticipantController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(
+        private readonly EventCheckInService $checkInService
+    ) {}
 
     /* =======================================================
        LIST EVENTS + PARTICIPANTS
@@ -142,7 +148,15 @@ class ParticipantController extends Controller
          * ✅ Manual participants allowed
          * (user_id & employee_id can be NULL)
          */
-        Participant::create($validated);
+        $participant = Participant::create($validated);
+        $participant = $this->checkInService->ensureParticipantCredentials($participant);
+
+        if (! empty($participant->display_email) && $participant->display_email !== 'N/A') {
+            $ticketUrl = $this->checkInService->buildTicketUrl($participant);
+
+            \Notification::route('mail', $participant->display_email)
+                ->notify(new ParticipantTicketNotification($event, $participant, $ticketUrl));
+        }
 
         return redirect()
             ->route('admin.participants.index')
@@ -160,7 +174,8 @@ class ParticipantController extends Controller
             abort(403);
         }
 
-        $participant->load(['user.roles', 'employee', 'attendances']);
+        $participant = $this->checkInService->ensureParticipantCredentials($participant);
+        $participant->load(['user.roles', 'employee', 'attendances', 'checkedInBy']);
 
         return view('admin.participants.show', compact('event', 'participant'));
     }

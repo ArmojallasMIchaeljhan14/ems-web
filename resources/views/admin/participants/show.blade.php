@@ -63,6 +63,16 @@
                             <p class="text-sm text-gray-500">Role / Designation</p>
                             <p class="font-semibold text-purple-700">{{ $participant->role ?? 'Standard Participant' }}</p>
                         </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Invitation Code</p>
+                            <p class="font-semibold text-gray-900">{{ $participant->invitation_code ?? 'N/A' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Check-In</p>
+                            <p class="font-semibold text-gray-900">
+                                {{ $participant->checked_in_at ? $participant->checked_in_at->format('M d, Y h:i A') : 'Not checked in' }}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -186,6 +196,23 @@
                     <h2 class="mb-4 text-lg font-semibold">Actions</h2>
                     <div class="space-y-2">
                         @if(auth()->user()->isAdmin() || auth()->user()->can('manage participants'))
+                            @can('event tickets print')
+                                <a href="{{ route('checkin.ticket', [$event, $participant]) }}" target="_blank" class="flex w-full items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50">
+                                    Print Ticket
+                                </a>
+
+                                <a href="{{ route('checkin.qr.download', [$event, $participant]) }}" class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">
+                                    Download QR (.png)
+                                </a>
+
+                                <form method="POST" action="{{ route('checkin.ticket.resend', [$event, $participant]) }}">
+                                    @csrf
+                                    <button type="submit" class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50">
+                                        Resend Ticket Email
+                                    </button>
+                                </form>
+                            @endcan
+
                             <a href="{{ route('admin.events.participants.edit', [$event, $participant]) }}" class="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                 Update Information
