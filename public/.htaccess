@@ -1,3 +1,21 @@
+# Increase upload limits - Multiple approaches
+php_value upload_max_filesize 50M
+php_value post_max_size 50M
+php_value memory_limit 256M
+php_value max_execution_time 300
+php_value max_input_time 300
+
+# Alternative syntax for some servers
+php_flag upload_max_filesize 50M
+php_flag post_max_size 50M
+php_flag memory_limit 256M
+php_flag max_execution_time 300
+php_flag max_input_time 300
+
+# Additional settings
+php_value max_file_uploads 20
+php_value file_uploads On
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
