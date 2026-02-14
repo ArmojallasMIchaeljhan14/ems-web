@@ -18,7 +18,7 @@ class PostCommentController extends Controller
 
         $post->comments()->create([
             'user_id' => Auth::id(),
-            'content' => $request->content,
+            'body' => $request->content,
         ]);
 
         return redirect()->back();
@@ -35,7 +35,7 @@ class PostCommentController extends Controller
             'content' => ['required', 'string', 'max:1000'],
         ]);
 
-        $comment->update(['content' => $request->content]);
+        $comment->update(['body' => $request->content]);
 
         return redirect()->back();
     }
