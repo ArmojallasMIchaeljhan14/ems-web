@@ -42,7 +42,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->hasRole('admin');
+        return $this->hasRole('admin') || $this->hasRole('super_admin') || $this->is_admin === true;
     }
 
     public function isUser(): bool
@@ -76,5 +76,60 @@ class User extends Authenticatable
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);
+    }
+
+    /**
+     * Check if user has an employee record with specific position
+     */
+    public function hasEmployeeWithPosition(array $positions): bool
+    {
+        if (!$this->employee) {
+            return false;
+        }
+
+        $userPosition = strtolower($this->employee->position ?? '');
+        
+        foreach ($positions as $position) {
+            if (str_contains($userPosition, strtolower($position))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user is admin (helper method)
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super_admin') || $this->hasRole('admin') || $this->is_admin === true;
+    }
+
+    /**
+     * Get user's primary role name
+     */
+    public function getPrimaryRoleAttribute(): ?string
+    {
+        return $this->roles->first()?->name;
+    }
+
+    /**
+     * Get user's display role with proper formatting
+     */
+    public function getDisplayRoleAttribute(): string
+    {
+        $role = $this->primary_role;
+        
+        return match($role) {
+            'super_admin' => 'Super Admin',
+            'admin' => 'Administrator',
+            'finance' => 'Finance Officer',
+            'logistics' => 'Logistics Officer',
+            'event_manager' => 'Event Manager',
+            'multimedia_staff' => 'Multimedia Staff',
+            'user' => 'User',
+            default => ucfirst(str_replace('_', ' ', $role ?? 'Unknown')),
+        };
     }
 }

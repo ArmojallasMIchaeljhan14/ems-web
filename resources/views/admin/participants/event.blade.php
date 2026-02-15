@@ -47,21 +47,42 @@
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="md:col-span-2">
+                    <div>
                         <label class="text-sm font-medium">Select Employee (optional)</label>
-                            <select name="employee_id" id="employee_id" class="mt-1 block w-full border rounded px-2 py-1">
-                                <option value="">-- Manual Entry --</option>
-                                @foreach($employees as $emp)
-                                    <option value="{{ $emp->id }}"
-                                            data-name="{{ $emp->full_name }}"
-                                            data-email="{{ $emp->email ?? '' }}"
-                                            data-phone="{{ $emp->phone ?? '' }}"
-                                            {{ old('employee_id') == $emp->id ? 'selected' : '' }}> 
-                                        {{ $emp->full_name }} {{ $emp->email ? '(' . $emp->email . ')' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
+                        <select name="employee_id" id="employee_id" class="mt-1 block w-full border rounded px-2 py-1">
+                            <option value="">-- Select Employee --</option>
+                            @foreach($employees as $emp)
+                                <option value="{{ $emp->id }}"
+                                        data-name="{{ $emp->full_name }}"
+                                        data-email="{{ $emp->email ?? '' }}"
+                                        data-phone="{{ $emp->phone ?? '' }}"
+                                        {{ old('employee_id') == $emp->id ? 'selected' : '' }}> 
+                                    {{ $emp->full_name }} {{ $emp->email ? '(' . $emp->email . ')' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
+
+                    <div>
+                        <label class="text-sm font-medium">Select Registered User (optional)</label>
+                        <select name="user_id" id="user_id" class="mt-1 block w-full border rounded px-2 py-1">
+                            <option value="">-- Select Registered User --</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}"
+                                        data-name="{{ $user->name }}"
+                                        data-email="{{ $user->email }}"
+                                        data-phone="{{ $user->phone ?? '' }}"
+                                        {{ old('user_id') == $user->id ? 'selected' : '' }}> 
+                                    {{ $user->name }} ({{ $user->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <strong>Note:</strong> You can select either an employee OR a registered user, or enter details manually for non-registered participants.
+                </div>
 
                     <div>
                         <label class="text-sm">Full Name</label>
@@ -245,7 +266,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const empSelect = document.getElementById('employee_id');
-            if (!empSelect) return;
+            const userSelect = document.getElementById('user_id');
+            if (!empSelect || !userSelect) return;
 
             const nameInput = document.querySelector('input[name="name"]');
             const emailInput = document.querySelector('input[name="email"]');
@@ -256,32 +278,46 @@
                 const name = opt.dataset.name || '';
                 const email = opt.dataset.email || '';
                 const phone = opt.dataset.phone || '';
-                if (nameInput) nameInput.value = name;
-                if (emailInput) emailInput.value = email;
-                if (phoneInput) phoneInput.value = phone;
+                nameInput.value = name;
+                emailInput.value = email;
+                phoneInput.value = phone;
             }
 
-            // On change, fill inputs
-            empSelect.addEventListener('change', function (e) {
-                const val = e.target.value;
-                if (!val) {
-                    // manual entry: clear fields
-                    if (nameInput) nameInput.value = '';
-                    if (emailInput) emailInput.value = '';
-                    if (phoneInput) phoneInput.value = '';
-                    return;
-                }
-                const opt = empSelect.querySelector('option[value="' + CSS.escape(val) + '"]');
+            function applyUserData(opt) {
+                if (!opt) return;
+                const name = opt.dataset.name || '';
+                const email = opt.dataset.email || '';
+                const phone = opt.dataset.phone || '';
+                nameInput.value = name;
+                emailInput.value = email;
+                phoneInput.value = phone;
+            }
+
+            // Employee selection handler
+            empSelect.addEventListener('change', function () {
+                const opt = this.options[this.selectedIndex];
                 applyEmpData(opt);
+                // Clear user selection when employee is selected
+                userSelect.value = '';
             });
 
-            // If an employee was pre-selected (old input), apply its data on load
-            const initialVal = empSelect.value;
-            if (initialVal) {
-                const opt = empSelect.querySelector('option[value="' + CSS.escape(initialVal) + '"]');
-                applyEmpData(opt);
-            }
+            // User selection handler
+            userSelect.addEventListener('change', function () {
+                const opt = this.options[this.selectedIndex];
+                applyUserData(opt);
+                // Clear employee selection when user is selected
+                empSelect.value = '';
+            });
+
+            // Clear selections when manual entry is detected
+            [nameInput, emailInput, phoneInput].forEach(input => {
+                input.addEventListener('input', function () {
+                    if (this.value !== '') {
+                        empSelect.value = '';
+                        userSelect.value = '';
+                    }
+                });
+            });
         });
     </script>
-    </div>
 </x-app-layout>

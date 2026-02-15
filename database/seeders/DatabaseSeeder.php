@@ -25,6 +25,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'armojallasmichaeljhan0314@gmail.com'],
             array_merge($defaults, ['name' => 'Admin User'])
         );
+                User::updateOrCreate(
+            ['email' => 'Callojohnmichael@gmail.com'],
+            array_merge($defaults, ['name' => 'Admin User1'])
+        );
 
         User::updateOrCreate(
             ['email' => 'user@example.com'],
@@ -36,7 +40,7 @@ class DatabaseSeeder extends Seeder
             array_merge($defaults, ['name' => 'Multimedia Staff'])
         );
 
-        $this->call(RoleAndPermissionSeeder::class);
+        $this->call(ImprovedRoleAndPermissionSeeder::class);
         $this->call(GrantReportPermissionsSeeder::class);
 
         $this->call([

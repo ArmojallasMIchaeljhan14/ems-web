@@ -30,11 +30,11 @@
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {{-- Searchable User Selection --}}
-                    <div class="md:col-span-2">
+                    {{-- Searchable Employee Selection --}}
+                    <div>
                         <label for="employee_id" class="block text-sm font-medium text-gray-900">Search Employee</label>
                         <select name="employee_id" id="employee_id" placeholder="Start typing a name or email..." autocomplete="off">
-                            <option value="">-- Manual Entry (Not an employee) --</option>
+                            <option value="">-- Select Employee --</option>
                             @foreach($employees as $emp)
                                 <option value="{{ $emp->id }}" 
                                         data-name="{{ $emp->full_name }}" 
@@ -45,6 +45,27 @@
                             @endforeach
                         </select>
                     </div>
+
+                    {{-- Searchable User Selection --}}
+                    <div>
+                        <label for="user_id" class="block text-sm font-medium text-gray-900">Search Registered User</label>
+                        <select name="user_id" id="user_id" placeholder="Start typing a name or email..." autocomplete="off">
+                            <option value="">-- Select Registered User --</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}" 
+                                        data-name="{{ $user->name }}" 
+                                        data-email="{{ $user->email }}"
+                                        {{ old('user_id') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }} ({{ $user->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <strong>Note:</strong> You can select either an employee OR a registered user, or enter details manually for non-registered participants.
+                </div>
 
                     {{-- Full Name --}}
                     <div>
@@ -118,19 +139,45 @@
                 sortField: { field: "text", direction: "asc" }
             });
 
+            // Initialize Searchable Dropdown for users
+            const userSelect = new TomSelect("#user_id", {
+                create: false,
+                sortField: { field: "text", direction: "asc" }
+            });
+
             const nameInput = document.getElementById('name');
             const emailInput = document.getElementById('email');
 
-            // Handle Auto-fill
+            // Handle Employee Auto-fill
             empSelect.on('change', function(value) {
                 const originalOption = document.querySelector(`#employee_id option[value="${value}"]`);
                 if (originalOption) {
                     nameInput.value = originalOption.dataset.name || '';
                     emailInput.value = originalOption.dataset.email || '';
-                } else {
-                    nameInput.value = '';
-                    emailInput.value = '';
                 }
+                // Clear user selection when employee is selected
+                userSelect.clear();
+            });
+
+            // Handle User Auto-fill
+            userSelect.on('change', function(value) {
+                const originalOption = document.querySelector(`#user_id option[value="${value}"]`);
+                if (originalOption) {
+                    nameInput.value = originalOption.dataset.name || '';
+                    emailInput.value = originalOption.dataset.email || '';
+                }
+                // Clear employee selection when user is selected
+                empSelect.clear();
+            });
+
+            // Handle manual field changes - clear selections
+            [nameInput, emailInput].forEach(input => {
+                input.addEventListener('input', function() {
+                    if (this.value !== '') {
+                        empSelect.clear();
+                        userSelect.clear();
+                    }
+                });
             });
         });
     </script>
