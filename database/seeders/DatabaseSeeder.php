@@ -40,7 +40,6 @@ class DatabaseSeeder extends Seeder
             array_merge($defaults, ['name' => 'Multimedia Staff'])
         );
 
-        $this->call(ImprovedRoleAndPermissionSeeder::class);
         $this->call(GrantReportPermissionsSeeder::class);
 
         $this->call([
